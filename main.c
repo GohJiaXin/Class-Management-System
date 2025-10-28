@@ -53,11 +53,8 @@ int option(void)
     printf("7. Save\n\n");
     printf("Your choice: ");
 
-    if (scanf("%d", &choice) != 1) {
-        // bad input (non-number)
-        printf("Invalid input.\n");
-        return -1;
-    }
+    scanf("%d", &choice);
+    
     return choice;
 }
 
