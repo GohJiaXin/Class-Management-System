@@ -11,12 +11,19 @@ void DeleteRecord(void);
 void Save(void);
 
 int main(void)
-{
+{   
+    int min = 1, max = 7;
+
     printf("**********************************************************\n");
     printf("\tWelcome to Class Management System\n");
-    printf("**********************************************************\n");
+    printf("**********************************************************\n\n");
 
     int choice = option();   // matches prototype & definition
+
+    while (choice < min || choice > max) {
+        printf("Invalid choice: %d\n", choice);
+        choice = option();
+    }
 
     /* Example dispatch (fill in as you implement features) */
     switch (choice) {
@@ -27,8 +34,6 @@ int main(void)
         case 5: UpdateRecord(); break;
         case 6: DeleteRecord(); break;
         case 7: Save(); break;
-        default:
-            printf("Invalid choice: %d\n", choice);
     }
 
     return 0;
@@ -37,7 +42,6 @@ int main(void)
 int option(void)
 {
     int choice;
-    /* int min = 1, max = 7;  // unused; remove or use for validation */
 
     printf("Please choose from the following options:\n");
     printf("1. Open File\n");
@@ -46,7 +50,7 @@ int option(void)
     printf("4. Query\n");
     printf("5. Update Record\n");
     printf("6. Delete Record\n");
-    printf("7. Save\n");
+    printf("7. Save\n\n");
     printf("Your choice: ");
 
     if (scanf("%d", &choice) != 1) {
