@@ -60,7 +60,7 @@ int option(void)
 
 void readFile(void)
 {
-    FILE *pFile = fopen("P1_1-CMS.txt", "r");
+    FILE *pFile = fopen("Sample-CMS.txt", "r");
     if (!pFile) {
         perror("Could not open the file");
         return; // <-- don't continue if open failed
@@ -81,3 +81,4 @@ void Query(void)            { /* TODO */ }
 void UpdateRecord(void)     { /* TODO */ }
 void DeleteRecord(void)     { /* TODO */ }
 void Save(void)             { /* TODO */ }
+
