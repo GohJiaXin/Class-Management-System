@@ -94,21 +94,20 @@ int option(void)
 
 void readFile(void) 
 {
-    //Open file for reading 
     FILE *pFile = fopen("Sample-CMS.txt", "r");
     if (!pFile) {
         perror("Could not open the file");
         return;
     }
-    
-    //Free previous data if any
+
+    // Free previous data if any
     if (student_records != NULL) {
         free(student_records);
+        student_records = NULL;
         recordCount = 0;
         capacity = 0;
     }
 
-    //Initial memory allocation
     capacity = 100;
     student_records = malloc(capacity * sizeof(StudentRecords));
     if (!student_records) {
@@ -117,21 +116,22 @@ void readFile(void)
         return;
     }
 
-    //Buffer to hold each line of the file
-    char line[255];
+    char line[256];
+    int dataStarted = 0;
 
-    //Skip header lines until we reach the actual data lines
     while (fgets(line, sizeof(line), pFile)) {
-        if (line[0] >= '0' && line[0] <= '9') {
-            // We've reached a line that starts with a digit (the ID)
-            break;
+        line[strcspn(line, "\n")] = 0; // Remove newline
+
+        // Detect and skip header or empty lines
+        if (strlen(line) == 0) continue;
+        if (strstr(line, "ID") && strstr(line, "Name")) {
+            dataStarted = 1;
+            continue;
         }
-    }
-    
-    //Process this line and the following lines
-    do {
+        if (!dataStarted) continue;
+
+        // Expand storage if needed
         if (recordCount >= capacity) {
-            //Resize if needed
             capacity *= 2;
             StudentRecords *temp = realloc(student_records, capacity * sizeof(StudentRecords));
             if (!temp) {
@@ -140,22 +140,34 @@ void readFile(void)
             }
             student_records = temp;
         }
-        
-        int parsed = sscanf(line, "%d %99s %99s %f",
-            &student_records[recordCount].ID,
-            student_records[recordCount].Name,
-            student_records[recordCount].Programme,
-            &student_records[recordCount].Mark);
 
-        // Make sure that there are 4 outputs
-        if (parsed == 4) { 
+        int id;
+        char name[100];
+        char programme[100];
+        float mark;
+
+        // Try parsing as tab-separated
+        int parsed = sscanf(line, "%d\t%99[^\t]\t%99[^\t]\t%f", 
+                            &id, name, programme, &mark);
+
+        // Fallback if spaces were used instead of tabs
+        if (parsed != 4) {
+            parsed = sscanf(line, "%d %99[^\t] %99[^\t] %f", 
+                            &id, name, programme, &mark);
+        }
+
+        if (parsed == 4) {
+            student_records[recordCount].ID = id;
+            strncpy(student_records[recordCount].Name, name, sizeof(student_records[recordCount].Name));
+            strncpy(student_records[recordCount].Programme, programme, sizeof(student_records[recordCount].Programme));
+            student_records[recordCount].Mark = mark;
+
             recordCount++;
         } else {
-            printf("Skipping invalid line: %s", line);
+            printf("Skipping invalid line: %s (parsed=%d)\n", line, parsed);
         }
-    } while (fgets(line, sizeof(line), pFile));
+    }
 
-    //Close the file
     fclose(pFile);
     printf("Total records loaded: %d\n", recordCount);
 }
