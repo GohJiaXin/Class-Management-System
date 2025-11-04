@@ -5,11 +5,11 @@
 ========CORE FUNCTIONS===========
 ZhiHao          void ShowAllRecords(void)       COMPLETED
 ZhiHao          void InsertNewRecord(void)      COMPLETED
-Jason           void Query(void) 
+Jason           void Query(void)                COMPLETED
 Chef Anushka    void UpdateRecord(void)         COMPLETED
 Li Xuan         void DeleteRecord(void) 
 Li Xuan         void Save(void)
-TBA             void Exit(void)
+TBA             void Exit(void)                 COMPLETED
 
 ========ENHANCEMENT FEATURES============
 Jia Xin         Data cleaning and validation    COMPLETED
@@ -236,7 +236,66 @@ void ShowAllRecords(void)
 
 
 void InsertNewRecord(void)  { /* TODO */ }
-void Query(void)            { /* TODO */ }
+
+
+
+void Query(void)          
+{
+    //Check if there is records 
+    if (recordCount == 0) {
+        printf("No records available. Please load a file first.\n");
+        return;
+    }
+    
+
+    // ID Input & Validation & ID Match Student Record 
+    int id;
+    printf("Enter the student ID to query: ");
+    if (scanf("%d", &id) != 1) {
+        printf("Invalid input.\n");
+        while (getchar() != '\n');
+        return;
+    }
+    while (getchar() != '\n');
+
+    int found = -1;
+    for (int i = 0; i < recordCount; i++) {
+        if (student_records[i].ID == id) {
+            found = i;
+            break;
+        }
+    }
+
+    if (found == -1) {
+        printf("CMS: The record with ID=%d does not exist.\n", id);
+        return;
+    }
+
+
+
+    //Display the results in pretty table format
+    printf("\nCMS: The record with ID= %d is found in the data table.\n", id);
+    printf("------------------------------------------------------------");
+    printf("\n%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
+    printf("------------------------------------------------------------\n");
+    printf("%-10d %-20s %-20s %.2f\n", 
+        student_records[found].ID, 
+        student_records[found].Name, 
+        student_records[found].Programme, 
+        student_records[found].Mark);
+    //Bottom Border
+    printf("------------------------------------------------------------\n");
+    
+
+
+
+}
+
+
+
+
+
+
 /* Update record */
 void UpdateRecord(void)
 {
@@ -345,4 +404,5 @@ void AttendanceAndGrading(void)
 
     printf("\nCMS: Attendance and grading update complete.\n");
 }
+
 
