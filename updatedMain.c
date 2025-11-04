@@ -17,8 +17,7 @@ void sortByID(int order);
 void sortByName(int order);
 void sortByProgramme(int order);
 void sortByMarks(int order);
-
-
+void GradeDistribution(void); //Additional feature: Grade Distribution
 //Data structure for students records
 typedef struct {
     int ID;
@@ -54,6 +53,7 @@ int main(void)
                 printf("Goodbye!\n"); 
                 break;
             case 9: Sorting(); break;
+            case 10: GradeDistribution(); break;
             default: 
                 printf("Invalid choice: %d\n", choice);
                 break;
@@ -75,15 +75,16 @@ int option(void)
     int choice;
 
     printf("Please choose from the following options:\n");
-    printf("1. Read File\n");
-    printf("2. Show All Records\n");
-    printf("3. Insert New Record\n");
-    printf("4. Query\n");
-    printf("5. Update Record\n");
-    printf("6. Delete Record\n");
-    printf("7. Save\n");
-    printf("8. Exit\n");
-    printf("9. Sorting\n\n");
+    printf("1.  Read File\n");
+    printf("2.  Show All Records\n");
+    printf("3.  Insert New Record\n");
+    printf("4.  Query\n");
+    printf("5.  Update Record\n");
+    printf("6.  Delete Record\n");
+    printf("7.  Save\n");
+    printf("8.  Exit\n");
+    printf("9.  Sorting\n");
+    printf("10. GradeDistribution\n\n");
     printf("Your choice: ");
 
     if (scanf("%d", &choice) != 1) {
@@ -373,16 +374,6 @@ void Sorting(void)
                 break;
         }
 
-        // Display sorted results
-        /*printf("\nSorted Results:\n");
-        printf("ID\tName\tProgramme\tMark\n");
-        for (int i = 0; i < recordCount; i++) {
-            printf("%d\t%s\t%s\t%.2f\n",
-                   student_records[i].ID,
-                   student_records[i].Name,
-                   student_records[i].Programme,
-                   student_records[i].Mark);
-        }*/
        //Display the results in pretty table format
     printf("\nSorted Results:\n");
     printf("\n%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
@@ -463,12 +454,61 @@ void sortByMarks(int order)
         }
     }
 }
+void GradeDistribution() {
+    // Load data first
+    readFile();
+
+    // Check if there are records
+    if (recordCount == 0) {
+        printf("No records available. Please load a file first.\n");
+        return;
+    }
+
+    int gradeA = 0, gradeB = 0, gradeC = 0, gradeD = 0, gradeF = 0;
+    
+    // Count students in each grade category
+    for (int i = 0; i < recordCount; i++) {  // Fixed: changed recordCount-1 to recordCount
+        float mark = student_records[i].Mark;  // Get the actual mark from the record
+        
+        if (mark >= 80.0 && mark <= 100.0) {
+            gradeA++;
+        } else if (mark >= 70.0 && mark < 80.0) {
+            gradeB++;
+        } else if (mark >= 60.0 && mark < 70.0) {
+            gradeC++;
+        } else if (mark >= 50.0 && mark < 60.0) {
+            gradeD++;
+        } else if (mark >= 0.0 && mark < 50.0) {
+            gradeF++;
+        }
+    }
+
+    // Calculate percentages
+    float gradeApercent = (float)gradeA / recordCount * 100;
+    float gradeBpercent = (float)gradeB / recordCount * 100;
+    float gradeCpercent = (float)gradeC / recordCount * 100;
+    float gradeDpercent = (float)gradeD / recordCount * 100;
+    float gradeFpercent = (float)gradeF / recordCount * 100;
+
+    // Display grade distribution
+    printf("\nGRADE DISTRIBUTION\n");
+    printf("==================================================\n");
+    printf("%-8s %-12s %-10s %s\n", "Grade", "Range", "Count", "Percentage");
+    printf("--------------------------------------------------\n");
+    printf("%-8s %-12s %-10d %.1f%%\n", "A", "80-100", gradeA, gradeApercent);
+    printf("%-8s %-12s %-10d %.1f%%\n", "B", "70-79", gradeB, gradeBpercent);
+    printf("%-8s %-12s %-10d %.1f%%\n", "C", "60-69", gradeC, gradeCpercent);
+    printf("%-8s %-12s %-10d %.1f%%\n", "D", "50-59", gradeD, gradeDpercent);
+    printf("%-8s %-12s %-10d %.1f%%\n", "F", "0-49", gradeF, gradeFpercent);
+    printf("--------------------------------------------------\n");
+    printf("%-8s %-12s %-10d %.1f%%\n", "Total", "", recordCount, 100.0);
+    printf("==================================================\n");
+}
 
 void InsertNewRecord(void)  { /* TODO */ }
 void Query(void)            { /* TODO */ }
 void DeleteRecord(void)     { /* TODO */ }
 void Save(void)             { /* TODO */ }
-
 
 //Missing out on the summary statistics - Enhancement features
 //Missing on user interfaces
