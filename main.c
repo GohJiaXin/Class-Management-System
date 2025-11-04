@@ -13,7 +13,7 @@ TBA             void Exit(void)                 COMPLETED
 
 ========ENHANCEMENT FEATURES============
 Jia Xin         Data cleaning and validation    COMPLETED
-Jason           Summary statistics 
+Jason           Summary statistics              Completed
 Jia Xin         Attendance and grading system   COMPLETED
 TBA             Sorting Function
                 
@@ -28,7 +28,7 @@ Unique/Extra Features - to be disccused
 - Backup & Recovery
 - User Interface
 Add new code to "bring back to menu"? as current code will constantly bring up menu after choosing option
-
+Create Test Cases as per project requirements
 
 ========Timeline==========
 Complete Indiv Parts    Wednesday, 5 Nov 2359HRS 
@@ -443,3 +443,4 @@ void SummaryStats(void)
 
 
 }
+
