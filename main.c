@@ -43,12 +43,9 @@ int main(void)
             case 5: UpdateRecord(); break;
             case 6: DeleteRecord(); break;
             case 7: Save(); break;
-            case 8: 
-                printf("Goodbye!\n"); 
-                break;
-            default: 
-                printf("Invalid choice: %d\n", choice);
-                break;
+            case 8: printf("Goodbye!\n"); break;
+            case 9: AttendanceAndGrading(); break;
+            default: printf("Invalid choice: %d\n", choice); break;
         }
         printf("\n");
     } while (choice != 8);
@@ -199,7 +196,64 @@ void ShowAllRecords(void)
 
 void InsertNewRecord(void)  { /* TODO */ }
 void Query(void)            { /* TODO */ }
-void UpdateRecord(void)     { /* TODO */ }//Missing on validation of user inputs
+/* Update record */
+void UpdateRecord(void)
+{
+    if (recordCount == 0) {
+        printf("No records available. Please load a file first.\n");
+        return;
+    }
+
+    int id;
+    printf("Enter the student ID to update: ");
+    if (scanf("%d", &id) != 1) {
+        printf("Invalid input.\n");
+        while (getchar() != '\n');
+        return;
+    }
+    while (getchar() != '\n');
+
+    int found = -1;
+    for (int i = 0; i < recordCount; i++) {
+        if (student_records[i].ID == id) {
+            found = i;
+            break;
+        }
+    }
+
+    if (found == -1) {
+        printf("CMS: The record with ID=%d does not exist.\n", id);
+        return;
+    }
+
+    StudentRecords *rec = &student_records[found];
+    printf("Record found:\n");
+    printf("ID: %d\nName: %s\nProgramme: %s\nMark: %.2f\n",
+           rec->ID, rec->Name, rec->Programme, rec->Mark);
+
+    char input[100];
+    printf("Enter new name (leave blank to keep current): ");
+    fgets(input, sizeof(input), stdin);
+    input[strcspn(input, "\n")] = 0;
+    if (strlen(input) > 0)
+        strncpy(rec->Name, input, sizeof(rec->Name));
+
+    printf("Enter new programme (leave blank to keep current): ");
+    fgets(input, sizeof(input), stdin);
+    input[strcspn(input, "\n")] = 0;
+    if (strlen(input) > 0)
+        strncpy(rec->Programme, input, sizeof(rec->Programme));
+
+    printf("Enter new mark (-1 to keep current): ");
+    float mark;
+    if (scanf("%f", &mark) == 1 && mark >= 0.0f && mark <= 100.0f)
+        rec->Mark = mark;
+    else if (mark != -1)
+        printf("Invalid mark input. Keeping old mark.\n");
+
+    while (getchar() != '\n');
+    printf("CMS: The record with ID=%d is successfully updated.\n", rec->ID);
+}
 void DeleteRecord(void)     { /* TODO */ }
 void Save(void)             { /* TODO */ }
 
@@ -213,3 +267,40 @@ void Save(void)             { /* TODO */ }
 //2. Advanced search & visualizations
 //3. Smart Analytics Suite
 //4. Backup & Recovery
+
+/*Extra Features*/
+/* Attendance and grading */
+void AttendanceAndGrading(void)
+{
+    if (recordCount == 0) {
+        printf("No records available.\n");
+        return;
+    }
+
+    printf("\n--- Attendance and Grading System ---\n");
+
+    for (int i = 0; i < recordCount; i++) {
+        printf("\nUpdating %s (%d)\n", student_records[i].Name, student_records[i].ID);
+        printf("Enter attendance percentage (0–100): ");
+        int att;
+        if (scanf("%d", &att) != 1 || att < 0 || att > 100) {
+            printf("Invalid input, skipping.\n");
+            while (getchar() != '\n');
+            continue;
+        }
+        student_records[i].Attendance = att;
+
+        float mark = student_records[i].Mark;
+        char grade[3];
+
+        if (mark >= 85 && att >= 75) strcpy(grade, "A");
+        else if (mark >= 70 && att >= 70) strcpy(grade, "B");
+        else if (mark >= 55 && att >= 60) strcpy(grade, "C");
+        else if (mark >= 40 && att >= 50) strcpy(grade, "D");
+        else strcpy(grade, "F");
+
+        strcpy(student_records[i].Grade, grade);
+    }
+
+    printf("\nCMS: Attendance and grading update complete.\n");
+}
