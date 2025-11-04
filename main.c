@@ -1,3 +1,43 @@
+/*
+
+!!!!!!!!!!!Important Information!!!!!!!!
+
+========CORE FUNCTIONS===========
+ZhiHao          void ShowAllRecords(void)       COMPLETED
+ZhiHao          void InsertNewRecord(void)      COMPLETED
+Jason           void Query(void) 
+Chef Anushka    void UpdateRecord(void)         COMPLETED
+Li Xuan         void DeleteRecord(void) 
+Li Xuan         void Save(void)
+TBA             void Exit(void)
+
+========ENHANCEMENT FEATURES============
+Jia Xin         Data cleaning and validation    COMPLETED
+Jason           Summary statistics 
+Jia Xin         Attendance and grading system   COMPLETED
+TBA             Sorting Function
+                
+========Remarks/Meeting Agenda============
+User Interface not needed as per project requirements but can be considered as a unique feature? - to consult prof
+Interactive Prompt need to elaborate in what sense - to be discussed
+Proper Response formatting - to be discussed
+Unique/Extra Features - to be disccused
+- Attendance and grading system 
+- Advanced search & visualizations
+- Smart Analytics Suite
+- Backup & Recovery
+- User Interface
+Add new code to "bring back to menu"? as current code will constantly bring up menu after choosing option
+
+
+========Timeline==========
+Complete Indiv Parts    Wednesday, 5 Nov 2359HRS 
+Group Meeting           Thursday, 6 Nov ?? - ??
+Final Submission        Tuesday, 25 Nov 2359HRS
+Peer Evalutation        Wednesday, 26 Nov 2359HRS
+*/
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,6 +58,8 @@ typedef struct {
     char Name[100];
     char Programme[100];
     float Mark;
+    int Attendance;      // Added to match AttendanceAndGrading use
+    char Grade[3];       // Added to hold grades like "A", "B", etc.
 } StudentRecords;
 
 //Global variables to share data between functions
@@ -44,7 +86,6 @@ int main(void)
             case 6: DeleteRecord(); break;
             case 7: Save(); break;
             case 8: printf("Goodbye!\n"); break;
-            case 9: AttendanceAndGrading(); break;
             default: printf("Invalid choice: %d\n", choice); break;
         }
         printf("\n");
@@ -304,3 +345,4 @@ void AttendanceAndGrading(void)
 
     printf("\nCMS: Attendance and grading update complete.\n");
 }
+
