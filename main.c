@@ -51,6 +51,9 @@ void Query(void);
 void UpdateRecord(void);
 void DeleteRecord(void);
 void Save(void);
+void AttendanceAndGrading(void);
+void SummaryStats(void);
+
 
 //Data structure for students records
 typedef struct {
@@ -72,7 +75,7 @@ int main(void)
     int choice;
     
     do {
-        printf("**********************************************************\n");
+        printf("\n\n\n**********************************************************\n");
         printf("\tWelcome to Class Management System\n");
         printf("**********************************************************\n\n");
 
@@ -85,11 +88,13 @@ int main(void)
             case 5: UpdateRecord(); break;
             case 6: DeleteRecord(); break;
             case 7: Save(); break;
-            case 8: printf("Goodbye!\n"); break;
+            case 8: AttendanceAndGrading(); break;
+            case 9: SummaryStats(); break;
+            case 10: printf("Goodbye!\n"); break;
             default: printf("Invalid choice: %d\n", choice); break;
         }
         printf("\n");
-    } while (choice != 8);
+    } while (choice != 10);
     
     //Free memory before exiting
     if (student_records != NULL) {
@@ -112,7 +117,9 @@ int option(void)
     printf("5. Update Record\n");
     printf("6. Delete Record\n");
     printf("7. Save\n");
-    printf("8. Exit\n\n");
+    printf("8. Attendance and Grading\n");
+    printf("9. Summary Statistics\n");
+    printf("10. Exit\n");
     printf("Your choice: ");
 
     if (scanf("%d", &choice) != 1) {
@@ -357,18 +364,15 @@ void UpdateRecord(void)
 void DeleteRecord(void)     { /* TODO */ }
 void Save(void)             { /* TODO */ }
 
-//Missing out on the sorting -Enhancement features
-//Missing out on the summary statistics - Enhancement features
-//Missing on user interfaces
-//Missing out interactive prompts 
-//Missing out proper response formatting
-//Features that we can consider doing 
-//1. Attendance and grading system 
-//2. Advanced search & visualizations
-//3. Smart Analytics Suite
-//4. Backup & Recovery
+
+
+
+
 
 /*Extra Features*/
+
+
+
 /* Attendance and grading */
 void AttendanceAndGrading(void)
 {
@@ -406,3 +410,36 @@ void AttendanceAndGrading(void)
 }
 
 
+/* Summary Statistics*/
+void SummaryStats(void)
+{
+    if (recordCount == 0) {
+        printf("No records available.\n");
+        return;
+    }
+
+    // initialize variables to set 0
+    float sum = 0.0f;
+    int highestIndex = 0, lowestIndex = 0;
+
+    for (int i = 0; i < recordCount; i++)
+    {
+        if (student_records[i].Mark > student_records[highestIndex].Mark) 
+        {
+            highestIndex = i;
+        }
+        if (student_records[i].Mark < student_records[lowestIndex].Mark)
+        {
+            lowestIndex = i;
+        }
+    }
+    float average = sum / recordCount;
+
+    printf("\n --- Summary Statistics ---\n");
+    printf("Total number of Students = %d\n", recordCount);
+    printf("Average Mark = %.2f\n", &average);
+    printf("Highest mark: %.2f by %s\n", student_records[highestIndex].Mark, student_records[highestIndex].Name);
+    printf("Lowest MarkL %.2f by %s\n", student_records[lowestIndex].Mark, student_records[lowestIndex].Name);
+
+
+}
