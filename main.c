@@ -7,8 +7,8 @@ ZhiHao          void ShowAllRecords(void)       COMPLETED
 ZhiHao          void InsertNewRecord(void)      COMPLETED
 Jason           void Query(void)                COMPLETED
 Chef Anushka    void UpdateRecord(void)         COMPLETED
-Li Xuan         void DeleteRecord(void)         COMPLETED  
-Li Xuan         void Save(void)                 COMPLETED
+Li Xuan         void DeleteRecord(void) 
+Li Xuan         void Save(void)
 TBA             void Exit(void)                 COMPLETED
 
 ========ENHANCEMENT FEATURES============
@@ -560,13 +560,142 @@ void UpdateRecord(void)
 
 void DeleteRecord(void)
 {
-  //TODO//
+    if (recordCount == 0) {
+        printf("No records to delete. Load or insert records first.\n");
+        return;
+    }
+
+    int id;
+    char buf[256];
+
+    printf("Delete ID: ");
+    fflush(stdout); 
+
+    if (!fgets(buf, sizeof(buf), stdin)) {
+        printf("Input error.\n");
+        return;
+    }
+
+    if (sscanf(buf, "%d", &id) != 1) {
+        printf("Invalid ID. Please enter an integer.\n");
+        return;
+    }
+
+    // find index of record to delete
+    int index = findIndexById(id);
+    if (index < 0) {
+        printf("The record with ID=%d does not exist.\n", id);
+        return;
+    }
+
+    // checks if the record to delete is not the last one
+    if (index < recordCount - 1) {
+
+        // shift all the later blocks to left to fill the hole
+        memmove(&student_records[index],
+                &student_records[index + 1],
+                (size_t)(recordCount - index - 1) * sizeof(*student_records));
+    }
+    recordCount--;
+
+    // the original file we want to update
+    const char *final_path = "Sample-CMS.txt";
+
+    // temporary file to write updated data
+    const char *tmp_path   = "Sample-CMS.tmp";
+
+    // open temporary file in write binary mode
+    // prevent conversion of \n to \r\n on Windows
+    FILE *fp = fopen(tmp_path, "wb");
+
+    if (!fp) {
+        perror("Could not open temporary file for writing");
+        printf("In-memory record deleted, but file not updated. You may need to Save manually.\n");
+        return;
+    }
+
+    // write file header with proper cleanups
+    if (fprintf(fp, "ID\tName\tProgramme\tMark\n") < 0) {
+        perror("Write failed (header)");
+        fclose(fp);             //Release file pointer
+        remove(tmp_path);       //Deletes incomplete temp file
+        return;
+    }
+
+    // write remaining rows (tab-separated, newline terminated)
+    for (int i = 0; i < recordCount; i++) {
+        if (fprintf(fp, "%d\t%s\t%s\t%.2f\n",
+                    student_records[i].ID,
+                    student_records[i].Name,
+                    student_records[i].Programme,
+                    student_records[i].Mark) < 0) {
+            perror("Write failed (row)");
+            fclose(fp);
+            remove(tmp_path);
+            return;
+        }
+    }
+
+    // Close temp file and check for errors
+    if (fclose(fp) != 0) {
+        perror("Close failed for temporary file");
+        remove(tmp_path);
+        return;
+    }
+
+    // Remove original file
+    remove(final_path);
+
+    // Replace original file with temp file
+    if (rename(tmp_path, final_path) != 0) {
+        perror("Failed to replace the original file");
+        /* Try to restore: leave tmp file so data isn’t lost */
+        printf("File update not completed. Kept '%s' with the latest data.\n", tmp_path);
+        return;
+    }
+
+    printf("The record with ID=%d is successfully deleted. Remaining: %d\n", id, recordCount);
 }
 
 
 void Save(void)          
 {
-  //TODO//
+    if (recordCount == 0) {
+        printf("No records to save. Load or insert records first.\n");
+        return;
+    }
+
+    FILE *fp = fopen("Sample-CMS.txt", "w");
+    if (!fp) {
+        perror("Could not open Sample-CMS.txt for writing");
+        return;
+    }
+
+    // Check if there's enough space to write
+    if (fprintf(fp, "ID\tName\tProgramme\tMark\n") < 0) {
+        perror("Write failed (header)");
+        fclose(fp);
+        return;
+    }
+
+    // Write all records to file
+    for (int i = 0; i < recordCount; i++) {
+        if (fprintf(fp, "%d\t%s\t%s\t%.2f\n",
+                    student_records[i].ID,
+                    student_records[i].Name,
+                    student_records[i].Programme,
+                    student_records[i].Mark) < 0) {
+            perror("Write failed (row)");
+            fclose(fp);
+            return;
+        }
+    }
+
+    if (fclose(fp) != 0) {
+        perror("Close failed for Sample-CMS.txt");
+        return;
+    }
+    printf("All records successfully saved to Sample-CMS.txt\n");
 }
 
 
@@ -830,4 +959,3 @@ void GradeDistribution() {
     printf("%-8s %-12s %-10d %.1f%%\n", "Total", "", recordCount, 100.0);
     printf("==================================================\n");
 }
-
