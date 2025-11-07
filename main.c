@@ -178,7 +178,6 @@ int main(void)
             case 10: SummaryStats(); break;
             case 11: printf("Goodbye!\n"); break;
             default: 
-                printf("Invalid choice: %d\n", choice);
                 break;
         }
         printf("\n");
@@ -1062,3 +1061,4 @@ void Filtering(void)
             printf("Invalid choice. Please select 1 or 2.\n");
     }
 }
+
