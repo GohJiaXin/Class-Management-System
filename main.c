@@ -37,9 +37,11 @@ can work on merged SORT/FILTER function if have extra time but not important
 2. When inserting new record, currently inputting name does not validate if the user input ONLY has whitespace in the input for name and programme
 3. When inserting new record, inputing name and programme has no character limitations. need to set such that it wont go beyond the system formatting.
 4. same thing as 3 but for Update Record 
-5. Edit Sorting function such that it shows whether it is sorted numerically or alphabetically
+5. Edit Sorting function such that it shows whether it is sorted numerically or alphabetically (SOLVED by Jason)
 6. Filtering Function should not have name search as it is already covered by Query, and for programming, can consider to list the existing programmes in
     in the database then ask for input when user chooses to search by programme
+7. Sorting Function does not straight away return invalid when choosing an invalid Category choice 
+8. Filter Function No error returned when user enters for eg. 30 40 for minimum mark then 50 for maximum mark
 
 
 ***** OUTDATED ****
@@ -556,16 +558,16 @@ void Query(void)
 
     //Display the results in pretty table format
     printf("\nCMS: The record with ID= %d is found in the data table.\n", id);
-    printf("------------------------------------------------------------");
-    printf("\n%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
-    printf("------------------------------------------------------------\n");
-    printf("%-10d %-20s %-20s %.2f\n", 
+    printf("------------------------------------------------------------------");
+    printf("\n%-10s %-20s %-27s %s\n", "ID", "Name", "Programme", "Mark");
+    printf("------------------------------------------------------------------\n");
+    printf("%-10d %-20s %-27s %.2f\n", 
         student_records[found].ID, 
         student_records[found].Name, 
         student_records[found].Programme, 
         student_records[found].Mark);
     //Bottom Border
-    printf("------------------------------------------------------------\n");
+    printf("------------------------------------------------------------------\n");
 }
 
 // Update Record 
@@ -868,10 +870,10 @@ void Sorting(void)
 
     do {
         printf("\nPlease choose one category to sort by:\n");
-        printf("1. Sort by ID\n");
-        printf("2. Sort by Name\n");
-        printf("3. Sort by Programme\n");
-        printf("4. Sort by Marks\n");
+        printf("1. Sort Numerically by ID\n");
+        printf("2. Sort Alphabetically by Name\n");
+        printf("3. Sort Alphabetically by Programme\n");
+        printf("4. Sort Numerically by Marks\n");
         printf("5. Exit Sorting\n\n");
         printf("Enter your choice: ");
 
@@ -909,11 +911,11 @@ void Sorting(void)
 
        //Display the results in pretty table format
     printf("\nSorted Results:\n");
-    printf("\n%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
+    printf("\n%-10s %-20s %-27s %s\n", "ID", "Name", "Programme", "Mark");
     printf("===============================================================\n");
     
     for (int i = 0; i < recordCount; i++) {
-        printf("%-10d %-20s %-20s %.2f\n", 
+        printf("%-10d %-20s %-27s %.2f\n", 
                student_records[i].ID, 
                student_records[i].Name, 
                student_records[i].Programme, 
