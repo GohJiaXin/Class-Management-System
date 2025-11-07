@@ -129,6 +129,34 @@ static int findIndexById(int id) {
     return -1;
 }
 
+int ReturnMainMenu(void)
+{
+    char choice;
+    printf("Return to main menu? (Y/N): ");
+    fflush(stdout);  // make sure the prompt prints immediately
+
+    if (scanf(" %c", &choice) != 1) {   // notice the space before %c to skip newlines
+        printf("Invalid input.\n");
+        while (getchar() != '\n' && getchar() != EOF);
+        return 0;   // stay here if input fails
+    }
+
+    while (getchar() != '\n' && getchar() != EOF); // clear leftover chars
+
+    // convert to uppercase so it works with 'y' or 'Y'
+    choice = toupper(choice);
+
+    if (choice == 'Y') {
+        return 1;   // go back to main menu
+    } else if (choice == 'N') {
+        printf("Goodbye!\n");
+        exit(0);    // end program
+    } else {
+        printf("Invalid choice. Returning to main menu by default.\n");
+        return 1;
+    }
+}
+
 int main(void)
 {   
     int choice;
@@ -156,6 +184,7 @@ int main(void)
                 break;
         }
         printf("\n");
+        ReturnMainMenu();
     } while (choice != 12);
     
     //Free memory before exiting
@@ -208,6 +237,8 @@ void CheckRecord(void)
         return;
     }
 }
+
+
 
 
 void readFile(void) 
@@ -1077,3 +1108,4 @@ void Filtering(void)
 
     } while (choice != 3);
 }
+
