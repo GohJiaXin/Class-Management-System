@@ -50,6 +50,7 @@ Peer Evalutation        Wednesday, 26 Nov 2359HRS
 int option(void);
 void readFile(void);
 void ShowAllRecords(void);
+int CheckRecord(void);
 void InsertNewRecord(void);
 void Query(void);
 void UpdateRecord(void);
@@ -227,12 +228,13 @@ int option(void)
 }
 
 // Check if there is records
-void CheckRecord(void)
+int CheckRecord(void)
 {
     if (recordCount == 0) {
         printf("No records available. Please load a file first.\n");
-        return;
+        return 0;   // tell caller to stop
     }
+    return 1;       // OK to proceed
 }
 
 
@@ -321,7 +323,7 @@ void readFile(void)
 
 void ShowAllRecords(void)
 { 
-    CheckRecord();
+    if (!CheckRecord()) return;
 
     //Display the results in pretty table format
     printf("\n%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
@@ -343,7 +345,7 @@ void ShowAllRecords(void)
 
 void InsertNewRecord(void)
 {
-    CheckRecord();
+    if (!CheckRecord()) return;
 
     int id;
     char buf[256];
@@ -477,7 +479,7 @@ void InsertNewRecord(void)
 
 void Query(void)          
 {
-    CheckRecord();
+    if (!CheckRecord()) return;
     
     // ID Input & Validation & ID Match Student Record 
     int id;
@@ -526,7 +528,7 @@ void Query(void)
 // Update Record 
 void UpdateRecord(void)
 {
-    CheckRecord();
+    if (!CheckRecord()) return;
 
     int id;
     printf("Enter the student ID to update: ");
@@ -589,7 +591,7 @@ void UpdateRecord(void)
 
 void DeleteRecord(void)
 {
-    CheckRecord();
+    if (!CheckRecord()) return;
 
     int id;
     char buf[256];
@@ -686,10 +688,7 @@ void DeleteRecord(void)
 
 void Save(void)          
 {
-    if (recordCount == 0) {
-        printf("No records to save. Load or insert records first.\n");
-        return;
-    }
+    if (!CheckRecord()) return;
 
     FILE *fp = fopen("Sample-CMS.txt", "w");
     if (!fp) {
@@ -731,7 +730,7 @@ void Save(void)
 /* Attendance and grading */
 void AttendanceAndGrading(void)
 {
-    CheckRecord();
+    if (!CheckRecord()) return;CheckRecord();
     printf("\n--- Attendance and Grading System ---\n");
 
     for (int i = 0; i < recordCount; i++) {
@@ -764,7 +763,7 @@ void AttendanceAndGrading(void)
 /* Summary Statistics*/
 void SummaryStats(void)
 {
-    CheckRecord();
+    if (!CheckRecord()) return;
 
     float sum = 0.0f;
     int highestIndex = 0, lowestIndex = 0;
@@ -819,7 +818,7 @@ void Sorting(void)
 {
 
     // Check if there are records
-    CheckRecord();
+    if (!CheckRecord()) return;
 
     int sort_category;
     int order;
@@ -948,10 +947,7 @@ void sortByMarks(int order)
 
 void Filtering(void)
 {
-    if (recordCount == 0) {
-        printf("No records available. Please load a file first.\n");
-        return;
-    }
+    if (!CheckRecord()) return;
 
     int choice;
     char buf[256];
@@ -1061,4 +1057,3 @@ void Filtering(void)
             printf("Invalid choice. Please select 1 or 2.\n");
     }
 }
-
