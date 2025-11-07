@@ -352,6 +352,14 @@ void ShowAllRecords(void)
     printf("Total records loaded: %d\n", recordCount);
 }
 
+// helper: check if string contains only alphabets and spaces
+int isAlphaOnly(const char *str) {
+    for (int i = 0; str[i] != '\0'; i++) {
+        if (!isalpha((unsigned char)str[i]) && str[i] != ' ')
+            return 0;
+    }
+    return 1;
+}
 
 void InsertNewRecord(void)
 {
@@ -374,19 +382,16 @@ void InsertNewRecord(void)
         return;
     }
 
-    // validate integer input
     if (sscanf(buf, "%d", &id) != 1) {
         printf("Invalid ID. Please enter a valid integer.\n");
         return;
     }
 
-    // check 7-digit constraint
     if (id < 1000000 || id > 9999999) {
         printf("Invalid ID. It must be exactly 7 digits.\n");
         return;
     }
 
-    // check for duplicate ID
     if (idExists(id)) {
         printf("The record with ID=%d already exists. Insert aborted.\n", id);
         return;
@@ -408,6 +413,11 @@ void InsertNewRecord(void)
         return;
     }
 
+    if (!isAlphaOnly(name)) {
+        printf("Invalid name. Only alphabets and spaces are allowed.\n");
+        return;
+    }
+
     // user input programme
     char programme[100];
     printf("Programme: ");
@@ -421,6 +431,11 @@ void InsertNewRecord(void)
 
     if (programme[0] == '\0') {
         printf("Programme cannot be empty.\n");
+        return;
+    }
+
+    if (!isAlphaOnly(programme)) {
+        printf("Invalid programme. Only alphabets and spaces are allowed.\n");
         return;
     }
 
@@ -439,7 +454,6 @@ void InsertNewRecord(void)
         return;
     }
 
-    // Validate mark range (1.0 to 100.0)
     if (mark < 1.0f || mark > 100.0f) {
         printf("Invalid mark. Please enter a value between 1.0 and 100.0.\n");
         return;
@@ -486,7 +500,6 @@ void InsertNewRecord(void)
     printf("Record inserted: ID=%d, Name=\"%s\", Programme=\"%s\", Mark=%.2f\n",
            id, name, programme, mark);
 }
-
 void Query(void)          
 {
     if (!CheckRecord()) return;
