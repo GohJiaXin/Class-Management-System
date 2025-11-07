@@ -157,16 +157,22 @@ int ReturnMainMenu(void)
 }
 
 int main(void)
-{   
+{
     int choice;
-    
-    do {
+
+    for (;;) {
         printf("**********************************************************\n");
         printf("\tWelcome to Class Management System\n");
         printf("**********************************************************\n\n");
 
         choice = option();
-        switch (choice) {   
+
+        if (choice == 11) {              // Exit chosen: no ReturnMainMenu prompt
+            printf("Goodbye!\n");
+            break;
+        }
+
+        switch (choice) {
             case 1:  readFile(); break;
             case 2:  ShowAllRecords(); break;
             case 3:  InsertNewRecord(); break;
@@ -177,20 +183,24 @@ int main(void)
             case 8:  Sorting(); break;
             case 9:  Filtering(); break;
             case 10: SummaryStats(); break;
-            case 11: printf("Goodbye!\n"); break;
-            default: 
-                break;
+            default:
+                // option() should already print an error; just continue
+                continue;
         }
+
         printf("\n");
-        ReturnMainMenu();
-    } while (choice != 11);
-    
-    //Free memory before exiting
-    if (student_records != NULL) {
+
+        // Only ask to return after a non-exit action
+        if (!ReturnMainMenu()) {          
+            printf("Goodbye!\n");
+            break;
+        }
+    }
+
+    if (student_records) {
         free(student_records);
         student_records = NULL;
     }
-    
     return 0;
 }
 
@@ -1057,3 +1067,4 @@ void Filtering(void)
             printf("Invalid choice. Please select 1 or 2.\n");
     }
 }
+
