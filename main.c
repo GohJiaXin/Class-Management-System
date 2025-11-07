@@ -7,20 +7,42 @@ ZhiHao          void ShowAllRecords(void)       COMPLETED
 ZhiHao          void InsertNewRecord(void)      COMPLETED
 Jason           void Query(void)                COMPLETED
 Chef Anushka    void UpdateRecord(void)         COMPLETED
-Zhi Hao         void DeleteRecord(void) 
-Zhi Hao         void Save(void)
-Jason             void Exit(void)                 COMPLETED
+Zhi Hao         void DeleteRecord(void)         COMPLETED
+Zhi Hao         void Save(void)                 COMPLETED
+Jason           void Exit(void)                 COMPLETED
 
 ========ENHANCEMENT FEATURES============
 Jia Xin         Data cleaning and validation    COMPLETED
-Jason           Summary statistics              COMPLETED
-Anushka         Attendance and grading system   COMPLETED
-JiaXin             Sorting Function             COMPLETED
+Jason           Summary statistics              COMPLETED 
+Zhi Hao         Grade Distribution              COMPLETED - merged into summary statistics
+Anushka         Attendance and grading system   COMPLETED - Not in use
+JiaXin          Sorting Function                COMPLETED
                 
 ========ADDITIONAL FEATURES============
 JiaXin SearchByNameandProgramme                     COMPLETED
 JiaXin SearchByMarksRange                           COMPLETED
+
 ========Remarks/Meeting Agenda============
+**** UPDATED ****
+test for bugs/edge cases and create new test cases - do note down in the report ******IMPORTANT******* 1-2 per person
+ensure consistent formatting across all functions
+ensure ENTIRE CORE/ENHANCEMENT features is working VERY VERY VERY IMPORTANT
+possible to add validation for user to check if user has saved before exiting
+can work on merged SORT/FILTER function if have extra time but not important
+
+
+**** ERRORS/TROUBLESHOOT **** (Please note down if fixed thanks, DONT REMOVE as we can use it as test case)
+1. Anytime when user enters an input, system should allow the user to retry before returning to menu, possible to 
+    make it such that user can leave blank to return to menu( is this needed? need your opinions on this - jason )
+2. When inserting new record, currently inputting name does not validate if the user input ONLY has whitespace in the input for name and programme
+3. When inserting new record, inputing name and programme has no character limitations. need to set such that it wont go beyond the system formatting.
+4. same thing as 3 but for Update Record 
+5. Edit Sorting function such that it shows whether it is sorted numerically or alphabetically
+6. Filtering Function should not have name search as it is already covered by Query, and for programming, can consider to list the existing programmes in
+    in the database then ask for input when user chooses to search by programme
+
+
+***** OUTDATED ****
 User Interface not needed as per project requirements but can be considered as a unique feature? - to consult prof (NOT APPROVED)
 Interactive Prompt need to elaborate in what sense - to be discussed
 Proper Response formatting - to be discussed
@@ -33,11 +55,9 @@ Add new code to "bring back to menu"? as current code will constantly bring up m
 Create Test Cases as per project requirements
 summary statistics and grade distribution can merge
 
+
 ========Timeline==========
-Complete Indiv Parts    Wednesday, 5 Nov 2359HRS 
-Group Meeting           Thursday, 6 Nov ?? - ??
-Final Submission        Tuesday, 25 Nov 2359HRS
-Peer Evalutation        Wednesday, 26 Nov 2359HRS
+check telegram for updated
 */
 
 
@@ -336,11 +356,11 @@ void ShowAllRecords(void)
     if (!CheckRecord()) return;
 
     //Display the results in pretty table format
-    printf("\n%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
-    printf("------------------------------------------------------------\n");
+    printf("\n%-10s %-20s %-27s %s\n", "ID", "Name", "Programme", "Mark");
+    printf("------------------------------------------------------------------\n");
     
     for (int i = 0; i < recordCount; i++) {
-        printf("%-10d %-20s %-20s %.2f\n", 
+        printf("%-10d %-20s %-27s %.2f\n", 
                student_records[i].ID, 
                student_records[i].Name, 
                student_records[i].Programme, 
@@ -348,7 +368,7 @@ void ShowAllRecords(void)
     }
     printf("Total records: %d\n", recordCount);
     //Bottom Border
-    printf("===============================================================\n");
+    printf("==================================================================\n");
     printf("Total records loaded: %d\n", recordCount);
 }
 
