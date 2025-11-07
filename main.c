@@ -14,7 +14,7 @@ TBA             void Exit(void)                 COMPLETED
 ========ENHANCEMENT FEATURES============
 Jia Xin         Data cleaning and validation    COMPLETED
 Jason           Summary statistics              Completed
-Jia Xin         Attendance and grading system   COMPLETED
+Anushka        Attendance and grading system   COMPLETED
 TBA             Sorting Function
                 
 ========Remarks/Meeting Agenda============
@@ -959,4 +959,5 @@ void GradeDistribution() {
     printf("%-8s %-12s %-10d %.1f%%\n", "Total", "", recordCount, 100.0);
     printf("==================================================\n");
 }
+
 
