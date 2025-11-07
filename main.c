@@ -18,17 +18,17 @@ Jia Xin         Attendance and grading system   COMPLETED
 TBA             Sorting Function
                 
 ========Remarks/Meeting Agenda============
-User Interface not needed as per project requirements but can be considered as a unique feature? - to consult prof
+User Interface not needed as per project requirements but can be considered as a unique feature? - to consult prof (NOT APPROVED)
 Interactive Prompt need to elaborate in what sense - to be discussed
 Proper Response formatting - to be discussed
 Unique/Extra Features - to be disccused
-- Attendance and grading system 
-- Advanced search & visualizations
-- Smart Analytics Suite
-- Backup & Recovery
-- User Interface
+- Attendance and grading system (abit redundant need to look into this again)
+- Advanced search & visualizations (NOT APPROVED)
+- Smart Analytics Suite (NOT APPROVED)
+- User Interface (NOT APPROVED)
 Add new code to "bring back to menu"? as current code will constantly bring up menu after choosing option
 Create Test Cases as per project requirements
+summary statistics and grade distribution can merge
 
 ========Timeline==========
 Complete Indiv Parts    Wednesday, 5 Nov 2359HRS 
@@ -959,3 +959,4 @@ void GradeDistribution() {
     printf("%-8s %-12s %-10d %.1f%%\n", "Total", "", recordCount, 100.0);
     printf("==================================================\n");
 }
+
