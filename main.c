@@ -179,9 +179,6 @@ int main(void)
             case 9: GradeDistribution(); break;
             case 10: Filtering(); break;
             case 11: printf("Goodbye!\n"); break;
-            default: 
-                printf("Invalid choice: %d\n", choice);
-                break;
         }
         printf("\n");
         ReturnMainMenu();
@@ -219,7 +216,7 @@ int option(void)
         int c;
         while ((c = getchar()) != '\n' && c != EOF);
         printf("Invalid input.\n");
-        return -1;
+        return 0;
     }
     
     // Clear input buffer after successful read
