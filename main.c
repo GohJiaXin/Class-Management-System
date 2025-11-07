@@ -63,8 +63,7 @@ void sortByName(int order);
 void sortByProgramme(int order);
 void sortByMarks(int order);
 void GradeDistribution(void);
-void SearchByProgrammeOrName(void);
-void SearchByMarksRange(void);
+void Filtering(void);
 //Additional feature: Grade Distribution
 //Data structure for students records
 
@@ -150,9 +149,8 @@ int main(void)
             case 7: Save(); break;
             case 8: Sorting(); break;
             case 9: GradeDistribution(); break;
-            case 10: SearchByProgrammeOrName(); break;
-            case 11: SearchByMarksRange(); break;
-            case 12: printf("Goodbye!\n"); break;
+            case 10: Filtering(); break;
+            case 11: printf("Goodbye!\n"); break;
             default: 
                 printf("Invalid choice: %d\n", choice);
                 break;
@@ -183,9 +181,8 @@ int option(void)
     printf("7.  Save\n");
     printf("8.  Sorting\n");
     printf("9.  GradeDistribution\n");
-    printf("10. Search By Programme Or Name\n");
-    printf("11. Search By Marks Range\n");
-    printf("12. Exit\n\n");
+    printf("10. Filtering\n");
+    printf("11. Exit\n\n");
     printf("Your choice: ");
 
     if (scanf("%d", &choice) != 1) {
@@ -321,31 +318,33 @@ void InsertNewRecord(void)
     int id;
     char buf[256];
 
-    // make sure we have an array to write into
     if (!ensureCapacity(recordCount + 1)) {
         printf("Memory allocation error. Aborting insert.\n");
         return;
     }
 
     // user input ID
-    printf("Insert ID: ");
-    // force to print prompt immediately
+    printf("Insert ID (7 digits): ");
     fflush(stdout);
 
-    // if fgets fails, print error and return
     if (!fgets(buf, sizeof(buf), stdin)) {
         printf("Input error.\n");
         return;
     }
-    // reads string from buf and parses an integer into id
-    // if buf is not a valid integer, return false and print error
+
+    // validate integer input
     if (sscanf(buf, "%d", &id) != 1) {
-        printf("Invalid ID. Please enter an integer.\n");
+        printf("Invalid ID. Please enter a valid integer.\n");
         return;
     }
 
+    // check 7-digit constraint
+    if (id < 1000000 || id > 9999999) {
+        printf("Invalid ID. It must be exactly 7 digits.\n");
+        return;
+    }
 
-    // check if ID already exists
+    // check for duplicate ID
     if (idExists(id)) {
         printf("The record with ID=%d already exists. Insert aborted.\n", id);
         return;
@@ -356,15 +355,12 @@ void InsertNewRecord(void)
     printf("Name: ");
     fflush(stdout);
 
-    // if fgets == NULL, print error and return
     if (!fgets(name, sizeof(name), stdin)) {
         printf("Input error.\n");
         return;
     }
-    // remove '/n' at end of string
     trim_newline(name);
 
-    // check for empty name
     if (name[0] == '\0') {
         printf("Name cannot be empty.\n");
         return;
@@ -374,11 +370,13 @@ void InsertNewRecord(void)
     char programme[100];
     printf("Programme: ");
     fflush(stdout);
+
     if (!fgets(programme, sizeof(programme), stdin)) {
         printf("Input error.\n");
         return;
     }
     trim_newline(programme);
+
     if (programme[0] == '\0') {
         printf("Programme cannot be empty.\n");
         return;
@@ -388,41 +386,38 @@ void InsertNewRecord(void)
     float mark;
     printf("Mark: ");
     fflush(stdout);
+
     if (!fgets(buf, sizeof(buf), stdin)) {
         printf("Input error.\n");
         return;
     }
+
     if (sscanf(buf, "%f", &mark) != 1) {
         printf("Invalid mark. Please enter a number.\n");
         return;
     }
 
-    // Open file for appending
-    FILE *fp = fopen("Sample-CMS.txt", "a");
+    // Validate mark range (1.0 to 100.0)
+    if (mark < 1.0f || mark > 100.0f) {
+        printf("Invalid mark. Please enter a value between 1.0 and 100.0.\n");
+        return;
+    }
 
-    //if fp is NULL, print error and return
+    FILE *fp = fopen("Sample-CMS.txt", "a");
     if (!fp) {
         perror("Could not open Sample-CMS.txt for appending");
         return;
     }
 
-    // Move filepointer to end of file and check last character
     if (fseek(fp, -1, SEEK_END) == 0) {
-
-        // read last character and store in variable last
         int last = fgetc(fp);
-
         if (last != '\n') {
-            // ensure newline before writing new record
             fputc('\n', fp);
         }
-    }
-    else {
-        // handle cases where file is empty or new file
+    } else {
         fseek(fp, 0, SEEK_END);
     }
 
-    // Write new student record to file
     if (fprintf(fp, "%d\t%s\t%s\t%.2f\n", id, name, programme, mark) < 0) {
         perror("Write failed");
         fclose(fp);
@@ -430,16 +425,14 @@ void InsertNewRecord(void)
     }
     fclose(fp);
 
-    // Add new record to in-memory array
+    // add to memory
     student_records[recordCount].ID = id;
-    
-    // Safely copy strings with size limit
-    strncpy(student_records[recordCount].Name,      name,      sizeof(student_records[recordCount].Name) - 1);
-
-    // Prevent buffer overflow by ensuring null-termination
+    strncpy(student_records[recordCount].Name, name,
+            sizeof(student_records[recordCount].Name) - 1);
     student_records[recordCount].Name[sizeof(student_records[recordCount].Name) - 1] = '\0';
 
-    strncpy(student_records[recordCount].Programme, programme, sizeof(student_records[recordCount].Programme) - 1);
+    strncpy(student_records[recordCount].Programme, programme,
+            sizeof(student_records[recordCount].Programme) - 1);
     student_records[recordCount].Programme[sizeof(student_records[recordCount].Programme) - 1] = '\0';
 
     student_records[recordCount].Mark = mark;
@@ -451,9 +444,6 @@ void InsertNewRecord(void)
     printf("Record inserted: ID=%d, Name=\"%s\", Programme=\"%s\", Mark=%.2f\n",
            id, name, programme, mark);
 }
-
-
-
 
 void Query(void)          
 {
@@ -964,115 +954,126 @@ void GradeDistribution() {
     printf("%-8s %-12s %-10d %.1f%%\n", "Total", "", recordCount, 100.0);
     printf("==================================================\n");
 }
-void SearchByProgrammeOrName(void)
+void Filtering(void)
 {
-    
     if (recordCount == 0) {
         printf("No records available. Please load a file first.\n");
         return;
     }
 
-    char keyword[100];
-    printf("Enter keyword to search by Name or Programme: ");
-    fflush(stdout);
-
-    if (!fgets(keyword, sizeof(keyword), stdin)) {
-        printf("Input error.\n");
-        return;
-    }
-
-    keyword[strcspn(keyword, "\n")] = 0;
-
-    if (strlen(keyword) == 0) {
-        printf("Keyword cannot be empty.\n");
-        return;
-    }
-
-    // Convert keyword to lowercase
-    for (int i = 0; keyword[i]; i++) {
-        keyword[i] = tolower(keyword[i]);
-    }
-
-    printf("\nMatching Records:\n");
-    printf("%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
-    printf("------------------------------------------------------------\n");
-
-    int found = 0;
-    for (int i = 0; i < recordCount; i++) {
-        char nameLower[100], progLower[100];
-
-        strncpy(nameLower, student_records[i].Name, sizeof(nameLower));
-        nameLower[sizeof(nameLower) - 1] = '\0';
-        strncpy(progLower, student_records[i].Programme, sizeof(progLower));
-        progLower[sizeof(progLower) - 1] = '\0';
-
-        // Convert both fields to lowercase
-        for (int j = 0; nameLower[j]; j++) nameLower[j] = tolower(nameLower[j]);
-        for (int j = 0; progLower[j]; j++) progLower[j] = tolower(progLower[j]);
-
-        if (strstr(nameLower, keyword) || strstr(progLower, keyword)) {
-            printf("%-10d %-20s %-20s %.2f\n",
-                   student_records[i].ID,
-                   student_records[i].Name,
-                   student_records[i].Programme,
-                   student_records[i].Mark);
-            found++;
-        }
-    }
-
-    if (found == 0) {
-        printf("No matching records found for \"%s\".\n", keyword);
-    } else {
-        printf("------------------------------------------------------------\n");
-        printf("Total matches: %d\n", found);
-    }
-    
-
-}
-void SearchByMarksRange(void){
-    if (recordCount == 0) {
-        printf("No records available. Please load a file first.\n");
-        return;
-    }
-
-    float minMark, maxMark;
+    int choice;
     char buf[256];
 
-    printf("Enter minimum mark: ");
-    fflush(stdout);
-    if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%f", &minMark) != 1 || minMark < 0 || minMark > 100) {
-        printf("Invalid minimum mark.\n");
-        return;
-    }
-
-    printf("Enter maximum mark: ");
-    fflush(stdout);
-    if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%f", &maxMark) != 1 || maxMark < 0 || maxMark > 100 || maxMark < minMark) {
-        printf("Invalid maximum mark.\n");
-        return;
-    }
-
-    printf("\nStudents with marks between %.2f and %.2f:\n", minMark, maxMark);
-    printf("%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
-    printf("------------------------------------------------------------\n");
-
-    int found = 0;
-    for (int i = 0; i < recordCount; i++) {
-        float mark = student_records[i].Mark;
-        if (mark >= minMark && mark <= maxMark) {
-            printf("%-10d %-20s %-20s %.2f\n",
-                   student_records[i].ID,
-                   student_records[i].Name,
-                   student_records[i].Programme,
-                   mark);
-            found++;
+    do {
+        printf("\n--- Advanced Search Menu ---\n");
+        printf("1. Search by Name or Programme\n");
+        printf("2. Search by Marks Range\n");
+        printf("3. Return to Main Menu\n");
+        printf("Enter your choice: ");
+        
+        if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%d", &choice) != 1) {
+            printf("Invalid input.\n");
+            continue;
         }
-    }
 
-    if (found == 0) {
-        printf("No students found in the specified range.\n");
-    } else {
-        printf("------------------------------------------------------------\n");
-        printf("Total matches: %d\n", found);
-    }
+        switch (choice) {
+            case 1: {
+                char keyword[100];
+                printf("Enter keyword to search by Name or Programme: ");
+                fflush(stdout);
+                if (!fgets(keyword, sizeof(keyword), stdin)) {
+                    printf("Input error.\n");
+                    break;
+                }
+                keyword[strcspn(keyword, "\n")] = 0;
+                if (strlen(keyword) == 0) {
+                    printf("Keyword cannot be empty.\n");
+                    break;
+                }
+                for (int i = 0; keyword[i]; i++) keyword[i] = tolower(keyword[i]);
+
+                printf("\nMatching Records:\n");
+                printf("%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
+                printf("------------------------------------------------------------\n");
+
+                int found = 0;
+                for (int i = 0; i < recordCount; i++) {
+                    char nameLower[100], progLower[100];
+                    strncpy(nameLower, student_records[i].Name, sizeof(nameLower));
+                    nameLower[sizeof(nameLower) - 1] = '\0';
+                    strncpy(progLower, student_records[i].Programme, sizeof(progLower));
+                    progLower[sizeof(progLower) - 1] = '\0';
+                    for (int j = 0; nameLower[j]; j++) nameLower[j] = tolower(nameLower[j]);
+                    for (int j = 0; progLower[j]; j++) progLower[j] = tolower(progLower[j]);
+
+                    if (strstr(nameLower, keyword) || strstr(progLower, keyword)) {
+                        printf("%-10d %-20s %-20s %.2f\n",
+                               student_records[i].ID,
+                               student_records[i].Name,
+                               student_records[i].Programme,
+                               student_records[i].Mark);
+                        found++;
+                    }
+                }
+
+                if (found == 0) {
+                    printf("No matching records found for \"%s\".\n", keyword);
+                } else {
+                    printf("------------------------------------------------------------\n");
+                    printf("Total matches: %d\n", found);
+                }
+                break;
+            }
+
+            case 2: {
+                float minMark, maxMark;
+                printf("Enter minimum mark: ");
+                fflush(stdout);
+                if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%f", &minMark) != 1 || minMark < 0 || minMark > 100) {
+                    printf("Invalid minimum mark.\n");
+                    break;
+                }
+
+                printf("Enter maximum mark: ");
+                fflush(stdout);
+                if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%f", &maxMark) != 1 || maxMark < 0 || maxMark > 100 || maxMark < minMark) {
+                    printf("Invalid maximum mark.\n");
+                    break;
+                }
+
+                printf("\nStudents with marks between %.2f and %.2f:\n", minMark, maxMark);
+                printf("%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
+                printf("------------------------------------------------------------\n");
+
+                int found = 0;
+                for (int i = 0; i < recordCount; i++) {
+                    float mark = student_records[i].Mark;
+                    if (mark >= minMark && mark <= maxMark) {
+                        printf("%-10d %-20s %-20s %.2f\n",
+                               student_records[i].ID,
+                               student_records[i].Name,
+                               student_records[i].Programme,
+                               mark);
+                        found++;
+                    }
+                }
+
+                if (found == 0) {
+                    printf("No students found in the specified range.\n");
+                } else {
+                    printf("------------------------------------------------------------\n");
+                    printf("Total matches: %d\n", found);
+                }
+                break;
+            }
+
+            case 3:
+                printf("Returning to main menu...\n");
+                break;
+
+            default:
+                printf("Invalid choice. Please select 1–3.\n");
+        }
+
+    } while (choice != 3);
 }
