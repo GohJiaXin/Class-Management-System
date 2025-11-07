@@ -55,14 +55,12 @@ void Query(void);
 void UpdateRecord(void);
 void DeleteRecord(void);
 void Save(void);
-void AttendanceAndGrading(void);
 void SummaryStats(void);
 void Sorting(void);
 void sortByID(int order);
 void sortByName(int order);
 void sortByProgramme(int order);
 void sortByMarks(int order);
-void GradeDistribution(void);
 void Filtering(void);
 //Additional feature: Grade Distribution
 //Data structure for students records
@@ -168,21 +166,24 @@ int main(void)
 
         choice = option();
         switch (choice) {   
-            case 1: readFile(); break;
-            case 2: ShowAllRecords(); break;
-            case 3: InsertNewRecord(); break;
-            case 4: Query(); break;
-            case 5: UpdateRecord(); break;
-            case 6: DeleteRecord(); break;
-            case 7: Save(); break;
-            case 8: Sorting(); break;
-            case 9: GradeDistribution(); break;
-            case 10: Filtering(); break;
+            case 1:  readFile(); break;
+            case 2:  ShowAllRecords(); break;
+            case 3:  InsertNewRecord(); break;
+            case 4:  Query(); break;
+            case 5:  UpdateRecord(); break;
+            case 6:  DeleteRecord(); break;
+            case 7:  Save(); break;
+            case 8:  Sorting(); break;
+            case 9:  Filtering(); break;
+            case 10: SummaryStats(); break;
             case 11: printf("Goodbye!\n"); break;
+            default: 
+                printf("Invalid choice: %d\n", choice);
+                break;
         }
         printf("\n");
         ReturnMainMenu();
-    } while (choice != 12);
+    } while (choice != 11);
     
     //Free memory before exiting
     if (student_records != NULL) {
@@ -206,8 +207,8 @@ int option(void)
     printf("6.  Delete Record\n");
     printf("7.  Save\n");
     printf("8.  Sorting\n");
-    printf("9.  GradeDistribution\n");
-    printf("10. Filtering\n");
+    printf("9.  Filtering\n");
+    printf("10. Summary Stats\n");
     printf("11. Exit\n\n");
     printf("Your choice: ");
 
@@ -216,7 +217,7 @@ int option(void)
         int c;
         while ((c = getchar()) != '\n' && c != EOF);
         printf("Invalid input.\n");
-        return 0;
+        return -1;
     }
     
     // Clear input buffer after successful read
@@ -343,6 +344,8 @@ void ShowAllRecords(void)
 
 void InsertNewRecord(void)
 {
+    CheckRecord();
+
     int id;
     char buf[256];
 
@@ -587,10 +590,7 @@ void UpdateRecord(void)
 
 void DeleteRecord(void)
 {
-    if (recordCount == 0) {
-        printf("No records to delete. Load or insert records first.\n");
-        return;
-    }
+    CheckRecord();
 
     int id;
     char buf[256];
@@ -732,11 +732,7 @@ void Save(void)
 /* Attendance and grading */
 void AttendanceAndGrading(void)
 {
-    if (recordCount == 0) {
-        printf("No records available.\n");
-        return;
-    }
-
+    CheckRecord();
     printf("\n--- Attendance and Grading System ---\n");
 
     for (int i = 0; i < recordCount; i++) {
@@ -769,46 +765,62 @@ void AttendanceAndGrading(void)
 /* Summary Statistics*/
 void SummaryStats(void)
 {
-    if (recordCount == 0) {
-        printf("No records available.\n");
-        return;
-    }
+    CheckRecord();
 
-    // initialize variables to set 0
     float sum = 0.0f;
     int highestIndex = 0, lowestIndex = 0;
-    float average = sum / recordCount;
+    int gradeA = 0, gradeB = 0, gradeC = 0, gradeD = 0, gradeF = 0;
 
-    for (int i = 0; i < recordCount; i++)
-    {
-        sum += student_records[i].Mark;
-        if (student_records[i].Mark > student_records[highestIndex].Mark) 
-        {
-            highestIndex = i;
-        }
-        if (student_records[i].Mark < student_records[lowestIndex].Mark)
-        {
-            lowestIndex = i;
-        }
+    for (int i = 0; i < recordCount; i++) {
+        float mark = student_records[i].Mark;
+        sum += mark;
+
+        if (mark > student_records[highestIndex].Mark) highestIndex = i;
+        if (mark < student_records[lowestIndex].Mark) lowestIndex = i;
+
+        if (mark >= 80.0 && mark <= 100.0) gradeA++;
+        else if (mark >= 70.0 && mark < 80.0) gradeB++;
+        else if (mark >= 60.0 && mark < 70.0) gradeC++;
+        else if (mark >= 50.0 && mark < 60.0) gradeD++;
+        else if (mark >= 0.0 && mark < 50.0) gradeF++;
     }
 
+    float average = sum / recordCount;
+    float gradeApercent = (float)gradeA / recordCount * 100;
+    float gradeBpercent = (float)gradeB / recordCount * 100;
+    float gradeCpercent = (float)gradeC / recordCount * 100;
+    float gradeDpercent = (float)gradeD / recordCount * 100;
+    float gradeFpercent = (float)gradeF / recordCount * 100;
+
+    // Summary Output
     printf("\n --- Summary Statistics ---\n");
     printf("Total number of Students = %d\n", recordCount);
     printf("Average Mark = %.2f\n", average);
     printf("Highest mark: %.2f by %s\n", student_records[highestIndex].Mark, student_records[highestIndex].Name);
-    printf("Lowest Mark: %.2f by %s\n", student_records[lowestIndex].Mark, student_records[lowestIndex].Name);
+    printf("Lowest mark: %.2f by %s\n", student_records[lowestIndex].Mark, student_records[lowestIndex].Name);
 
+    // Grade Distribution Output
+    printf("\n --- Grade Distribution ---\n");
+    printf("==================================================\n");
+    printf("%-8s %-12s %-10s %s\n", "Grade", "Range", "Count", "Percentage");
+    printf("--------------------------------------------------\n");
+    printf("%-8s %-12s %-10d %.1f%%\n", "A", "80-100", gradeA, gradeApercent);
+    printf("%-8s %-12s %-10d %.1f%%\n", "B", "70-79", gradeB, gradeBpercent);
+    printf("%-8s %-12s %-10d %.1f%%\n", "C", "60-69", gradeC, gradeCpercent);
+    printf("%-8s %-12s %-10d %.1f%%\n", "D", "50-59", gradeD, gradeDpercent);
+    printf("%-8s %-12s %-10d %.1f%%\n", "F", "0-49", gradeF, gradeFpercent);
+    printf("--------------------------------------------------\n");
+    printf("%-8s %-12s %-10d %.1f%%\n", "Total", "", recordCount, 100.0);
+    printf("==================================================\n");
 }
+
 
 
 void Sorting(void)
 {
 
     // Check if there are records
-    if (recordCount == 0) {
-        printf("No records available. Please load a file first.\n");
-        return;
-    }
+    CheckRecord();
 
     int sort_category;
     int order;
@@ -934,54 +946,7 @@ void sortByMarks(int order)
         }
     }
 }
-void GradeDistribution() {
 
-    // Check if there are records
-    if (recordCount == 0) {
-        printf("No records available. Please load a file first.\n");
-        return;
-    }
-
-    int gradeA = 0, gradeB = 0, gradeC = 0, gradeD = 0, gradeF = 0;
-    
-    // Count students in each grade category
-    for (int i = 0; i < recordCount; i++) {  // Fixed: changed recordCount-1 to recordCount
-        float mark = student_records[i].Mark;  // Get the actual mark from the record
-        
-        if (mark >= 80.0 && mark <= 100.0) {
-            gradeA++;
-        } else if (mark >= 70.0 && mark < 80.0) {
-            gradeB++;
-        } else if (mark >= 60.0 && mark < 70.0) {
-            gradeC++;
-        } else if (mark >= 50.0 && mark < 60.0) {
-            gradeD++;
-        } else if (mark >= 0.0 && mark < 50.0) {
-            gradeF++;
-        }
-    }
-
-    // Calculate percentages
-    float gradeApercent = (float)gradeA / recordCount * 100;
-    float gradeBpercent = (float)gradeB / recordCount * 100;
-    float gradeCpercent = (float)gradeC / recordCount * 100;
-    float gradeDpercent = (float)gradeD / recordCount * 100;
-    float gradeFpercent = (float)gradeF / recordCount * 100;
-
-    // Display grade distribution
-    printf("\nGRADE DISTRIBUTION\n");
-    printf("==================================================\n");
-    printf("%-8s %-12s %-10s %s\n", "Grade", "Range", "Count", "Percentage");
-    printf("--------------------------------------------------\n");
-    printf("%-8s %-12s %-10d %.1f%%\n", "A", "80-100", gradeA, gradeApercent);
-    printf("%-8s %-12s %-10d %.1f%%\n", "B", "70-79", gradeB, gradeBpercent);
-    printf("%-8s %-12s %-10d %.1f%%\n", "C", "60-69", gradeC, gradeCpercent);
-    printf("%-8s %-12s %-10d %.1f%%\n", "D", "50-59", gradeD, gradeDpercent);
-    printf("%-8s %-12s %-10d %.1f%%\n", "F", "0-49", gradeF, gradeFpercent);
-    printf("--------------------------------------------------\n");
-    printf("%-8s %-12s %-10d %.1f%%\n", "Total", "", recordCount, 100.0);
-    printf("==================================================\n");
-}
 void Filtering(void)
 {
     if (recordCount == 0) {
@@ -992,117 +957,108 @@ void Filtering(void)
     int choice;
     char buf[256];
 
-    do {
-        printf("\n--- Advanced Search Menu ---\n");
-        printf("1. Search by Name or Programme\n");
-        printf("2. Search by Marks Range\n");
-        printf("3. Return to Main Menu\n");
-        printf("Enter your choice: ");
-        
-        if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%d", &choice) != 1) {
-            printf("Invalid input.\n");
-            continue;
-        }
+    printf("\n--- Advanced Search Menu ---\n");
+    printf("1. Search by Name or Programme\n");
+    printf("2. Search by Marks Range\n");
+    printf("Enter your choice: ");
 
-        switch (choice) {
-            case 1: {
-                char keyword[100];
-                printf("Enter keyword to search by Name or Programme: ");
-                fflush(stdout);
-                if (!fgets(keyword, sizeof(keyword), stdin)) {
-                    printf("Input error.\n");
-                    break;
+    if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%d", &choice) != 1) {
+        printf("Invalid input.\n");
+        return;
+    }
+
+    switch (choice) {
+        case 1: {
+            char keyword[100];
+            printf("Enter keyword to search by Name or Programme: ");
+            fflush(stdout);
+            if (!fgets(keyword, sizeof(keyword), stdin)) {
+                printf("Input error.\n");
+                return;
+            }
+            keyword[strcspn(keyword, "\n")] = 0;
+            if (strlen(keyword) == 0) {
+                printf("Keyword cannot be empty.\n");
+                return;
+            }
+            for (int i = 0; keyword[i]; i++) keyword[i] = tolower(keyword[i]);
+
+            printf("\nMatching Records:\n");
+            printf("%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
+            printf("------------------------------------------------------------\n");
+
+            int found = 0;
+            for (int i = 0; i < recordCount; i++) {
+                char nameLower[100], progLower[100];
+                strncpy(nameLower, student_records[i].Name, sizeof(nameLower));
+                nameLower[sizeof(nameLower) - 1] = '\0';
+                strncpy(progLower, student_records[i].Programme, sizeof(progLower));
+                progLower[sizeof(progLower) - 1] = '\0';
+                for (int j = 0; nameLower[j]; j++) nameLower[j] = tolower(nameLower[j]);
+                for (int j = 0; progLower[j]; j++) progLower[j] = tolower(progLower[j]);
+
+                if (strstr(nameLower, keyword) || strstr(progLower, keyword)) {
+                    printf("%-10d %-20s %-20s %.2f\n",
+                           student_records[i].ID,
+                           student_records[i].Name,
+                           student_records[i].Programme,
+                           student_records[i].Mark);
+                    found++;
                 }
-                keyword[strcspn(keyword, "\n")] = 0;
-                if (strlen(keyword) == 0) {
-                    printf("Keyword cannot be empty.\n");
-                    break;
-                }
-                for (int i = 0; keyword[i]; i++) keyword[i] = tolower(keyword[i]);
-
-                printf("\nMatching Records:\n");
-                printf("%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
-                printf("------------------------------------------------------------\n");
-
-                int found = 0;
-                for (int i = 0; i < recordCount; i++) {
-                    char nameLower[100], progLower[100];
-                    strncpy(nameLower, student_records[i].Name, sizeof(nameLower));
-                    nameLower[sizeof(nameLower) - 1] = '\0';
-                    strncpy(progLower, student_records[i].Programme, sizeof(progLower));
-                    progLower[sizeof(progLower) - 1] = '\0';
-                    for (int j = 0; nameLower[j]; j++) nameLower[j] = tolower(nameLower[j]);
-                    for (int j = 0; progLower[j]; j++) progLower[j] = tolower(progLower[j]);
-
-                    if (strstr(nameLower, keyword) || strstr(progLower, keyword)) {
-                        printf("%-10d %-20s %-20s %.2f\n",
-                               student_records[i].ID,
-                               student_records[i].Name,
-                               student_records[i].Programme,
-                               student_records[i].Mark);
-                        found++;
-                    }
-                }
-
-                if (found == 0) {
-                    printf("No matching records found for \"%s\".\n", keyword);
-                } else {
-                    printf("------------------------------------------------------------\n");
-                    printf("Total matches: %d\n", found);
-                }
-                break;
             }
 
-            case 2: {
-                float minMark, maxMark;
-                printf("Enter minimum mark: ");
-                fflush(stdout);
-                if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%f", &minMark) != 1 || minMark < 0 || minMark > 100) {
-                    printf("Invalid minimum mark.\n");
-                    break;
-                }
-
-                printf("Enter maximum mark: ");
-                fflush(stdout);
-                if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%f", &maxMark) != 1 || maxMark < 0 || maxMark > 100 || maxMark < minMark) {
-                    printf("Invalid maximum mark.\n");
-                    break;
-                }
-
-                printf("\nStudents with marks between %.2f and %.2f:\n", minMark, maxMark);
-                printf("%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
+            if (found == 0) {
+                printf("No matching records found for \"%s\".\n", keyword);
+            } else {
                 printf("------------------------------------------------------------\n");
-
-                int found = 0;
-                for (int i = 0; i < recordCount; i++) {
-                    float mark = student_records[i].Mark;
-                    if (mark >= minMark && mark <= maxMark) {
-                        printf("%-10d %-20s %-20s %.2f\n",
-                               student_records[i].ID,
-                               student_records[i].Name,
-                               student_records[i].Programme,
-                               mark);
-                        found++;
-                    }
-                }
-
-                if (found == 0) {
-                    printf("No students found in the specified range.\n");
-                } else {
-                    printf("------------------------------------------------------------\n");
-                    printf("Total matches: %d\n", found);
-                }
-                break;
+                printf("Total matches: %d\n", found);
             }
-
-            case 3:
-                printf("Returning to main menu...\n");
-                break;
-
-            default:
-                printf("Invalid choice. Please select 1–3.\n");
+            break;
         }
 
-    } while (choice != 3);
+        case 2: {
+            float minMark, maxMark;
+            printf("Enter minimum mark: ");
+            fflush(stdout);
+            if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%f", &minMark) != 1 || minMark < 0 || minMark > 100) {
+                printf("Invalid minimum mark.\n");
+                return;
+            }
+
+            printf("Enter maximum mark: ");
+            fflush(stdout);
+            if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%f", &maxMark) != 1 || maxMark < 0 || maxMark > 100 || maxMark < minMark) {
+                printf("Invalid maximum mark.\n");
+                return;
+            }
+
+            printf("\nStudents with marks between %.2f and %.2f:\n", minMark, maxMark);
+            printf("%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
+            printf("------------------------------------------------------------\n");
+
+            int found = 0;
+            for (int i = 0; i < recordCount; i++) {
+                float mark = student_records[i].Mark;
+                if (mark >= minMark && mark <= maxMark) {
+                    printf("%-10d %-20s %-20s %.2f\n",
+                           student_records[i].ID,
+                           student_records[i].Name,
+                           student_records[i].Programme,
+                           mark);
+                    found++;
+                }
+            }
+
+            if (found == 0) {
+                printf("No students found in the specified range.\n");
+            } else {
+                printf("------------------------------------------------------------\n");
+                printf("Total matches: %d\n", found);
+            }
+            break;
+        }
+
+        default:
+            printf("Invalid choice. Please select 1 or 2.\n");
+    }
 }
-
