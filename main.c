@@ -724,9 +724,6 @@ void UpdateRecord(void)
 
     printf("CMS: The record with ID=%d is successfully updated.\n", rec->ID);
 }
-
-
-
 void DeleteRecord(void)
 {
     if (!CheckRecord()) return;
@@ -734,20 +731,21 @@ void DeleteRecord(void)
     int id, index;
     char buf[256];
 
+    /* ===== 1) Get valid ID ===== */
     while (1) {
         printf("Delete ID (7 digits): ");
         fflush(stdout);
 
-        if (!fgets(buf, sizeof(buf), stdin)) 
-        { 
+        if (!fgets(buf, sizeof(buf), stdin)) { 
             printf("Input error.\n"); 
             return; 
         }
-        if (sscanf(buf, "%d", &id) != 1)
-        { 
+
+        if (sscanf(buf, "%d", &id) != 1) { 
             printf("Invalid ID. Please enter an integer.\n"); 
             continue; 
         }
+
         if (id < 1000000 || id > 9999999) {
             printf("Invalid ID. It must be exactly 7 digits.\n");
             continue;
@@ -758,9 +756,11 @@ void DeleteRecord(void)
             printf("The record with ID=%d does not exist. Please try again.\n", id);
             continue;
         }
+
         break; // valid & exists
     }
 
+    /* ===== 2) Remove from in-memory array ===== */
     if (index < recordCount - 1) {
         memmove(&student_records[index],
                 &student_records[index + 1],
@@ -768,10 +768,62 @@ void DeleteRecord(void)
     }
     recordCount--;
 
-    /* … (keep your file rewrite code unchanged) … */
+    /* ===== 3) Safely update file ===== */
+    const char *final_path = "Sample-CMS.txt";
+    const char *tmp_path   = "Sample-CMS.tmp";
+
+    FILE *fp = fopen(tmp_path, "wb");   // write binary avoids newline issues on Windows
+    if (!fp) {
+        perror("Could not open temporary file for writing");
+        printf("In-memory record deleted, but file not updated. You may need to Save manually.\n");
+        return;
+    }
+
+    // write header
+    if (fprintf(fp, "ID\tName\tProgramme\tMark\n") < 0) {
+        perror("Write failed (header)");
+        fclose(fp);
+        remove(tmp_path);
+        return;
+    }
+
+    // write all remaining records
+    for (int i = 0; i < recordCount; i++) {
+        if (fprintf(fp, "%d\t%s\t%s\t%.2f\n",
+                    student_records[i].ID,
+                    student_records[i].Name,
+                    student_records[i].Programme,
+                    student_records[i].Mark) < 0) {
+            perror("Write failed (row)");
+            fclose(fp);
+            remove(tmp_path);
+            return;
+        }
+    }
+
+    // close safely
+    if (fclose(fp) != 0) {
+        perror("Close failed for temporary file");
+        remove(tmp_path);
+        return;
+    }
+
+    // replace original file
+    if (remove(final_path) != 0) {
+        // it's fine if the file doesn’t exist — just warn
+        perror("Warning: could not remove old file");
+    }
+
+    if (rename(tmp_path, final_path) != 0) {
+        perror("Failed to replace the original file");
+        printf("File update not completed. Kept '%s' with the latest data.\n", tmp_path);
+        return;
+    }
 
     printf("The record with ID=%d is successfully deleted. Remaining: %d\n", id, recordCount);
 }
+
+
 
 void Save(void)
 {
@@ -1144,3 +1196,4 @@ void Filtering(void)
             printf("Invalid choice. Please select 1 or 2.\n");
     }
 }
+
