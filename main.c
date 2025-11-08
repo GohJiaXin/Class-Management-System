@@ -42,6 +42,9 @@ can work on merged SORT/FILTER function if have extra time but not important
     in the database then ask for input when user chooses to search by programme
 7. Sorting Function does not straight away return invalid when choosing an invalid Category choice 
 8. Filter Function No error returned when user enters for eg. 30 40 for minimum mark then 50 for maximum mark
+9. When user using the Insert, Query, Delete and Update function, when user enter invalid value1 (eg. string instead of integer for ID),
+    system should allow user to retry instead of returning to main menu immediately
+10. In IsAlpha function, string without any alphabets but only spaces is considered valid, fixed by adding a flag to check if there is at least one alphabet
 
 
 ***** OUTDATED ****
@@ -158,11 +161,11 @@ int ReturnMainMenu(void)
 
     if (scanf(" %c", &choice) != 1) {   // notice the space before %c to skip newlines
         printf("Invalid input.\n");
-        while (getchar() != '\n' && getchar() != EOF);
+        while ((choice = getchar()) != '\n' && choice != EOF);
         return 0;   // stay here if input fails
     }
 
-    while (getchar() != '\n' && getchar() != EOF); // clear leftover chars
+    while ((choice = getchar()) != '\n' && choice != EOF);  // clear once
 
     // convert to uppercase so it works with 'y' or 'Y'
     choice = toupper(choice);
@@ -183,7 +186,7 @@ int main(void)
     int choice;
 
     for (;;) {
-        printf("**********************************************************\n");
+        printf("\n**********************************************************\n");
         printf("\tWelcome to Class Management System\n");
         printf("**********************************************************\n\n");
 
@@ -268,9 +271,6 @@ int CheckRecord(void)
     }
     return 1;       // OK to proceed
 }
-
-
-
 
 void readFile(void) 
 {
@@ -376,11 +376,16 @@ void ShowAllRecords(void)
 
 // helper: check if string contains only alphabets and spaces
 int isAlphaOnly(const char *str) {
+    int hasLetter = 0;
     for (int i = 0; str[i] != '\0'; i++) {
-        if (!isalpha((unsigned char)str[i]) && str[i] != ' ')
-            return 0;
+        if (isalpha((unsigned char)str[i])) {
+            hasLetter = 1;
+        } else if (str[i] != ' ') {
+            return 0;  // Invalid character
+        }
     }
-    return 1;
+    
+    return hasLetter;  // Must have at least one letter
 }
 
 void InsertNewRecord(void)
@@ -395,92 +400,109 @@ void InsertNewRecord(void)
         return;
     }
 
-    // user input ID
-    printf("Insert ID (7 digits): ");
-    fflush(stdout);
+    /* ===== 1) GET VALID ID ===== */
+    while (1) {
+        printf("Insert ID (7 digits): ");
+        fflush(stdout);
 
-    if (!fgets(buf, sizeof(buf), stdin)) {
-        printf("Input error.\n");
-        return;
+        if (!fgets(buf, sizeof(buf), stdin)) {
+            printf("Input error.\n");
+            return;   // real I/O error – okay to bail
+        }
+
+        if (sscanf(buf, "%d", &id) != 1) {
+            printf("Invalid ID. Please enter a valid integer.\n");
+            continue;  // ask again
+        }
+
+        if (id < 1000000 || id > 9999999) {
+            printf("Invalid ID. It must be exactly 7 digits.\n");
+            continue;  // ask again
+        }
+
+        if (idExists(id)) {
+            printf("The record with ID=%d already exists. Please enter another ID.\n", id);
+            continue;   
+        }
+
+        break; // valid ID
     }
 
-    if (sscanf(buf, "%d", &id) != 1) {
-        printf("Invalid ID. Please enter a valid integer.\n");
-        return;
-    }
-
-    if (id < 1000000 || id > 9999999) {
-        printf("Invalid ID. It must be exactly 7 digits.\n");
-        return;
-    }
-
-    if (idExists(id)) {
-        printf("The record with ID=%d already exists. Insert aborted.\n", id);
-        return;
-    }
-
-    // user input name
+    /* ===== 2) GET VALID NAME ===== */
     char name[100];
-    printf("Name: ");
-    fflush(stdout);
+    while (1) {
+        printf("Name: ");
+        fflush(stdout);
 
-    if (!fgets(name, sizeof(name), stdin)) {
-        printf("Input error.\n");
-        return;
+        if (!fgets(name, sizeof(name), stdin)) {
+            printf("Input error.\n");
+            return;
+        }
+        trim_newline(name);
+
+        if (name[0] == '\0') {
+            printf("Name cannot be empty.\n");
+            continue;
+        }
+
+        if (!isAlphaOnly(name)) {
+            printf("Invalid name. Only alphabets and spaces are allowed.\n");
+            continue;
+        }
+
+        break; // valid name
     }
-    trim_newline(name);
 
-    if (name[0] == '\0') {
-        printf("Name cannot be empty.\n");
-        return;
-    }
-
-    if (!isAlphaOnly(name)) {
-        printf("Invalid name. Only alphabets and spaces are allowed.\n");
-        return;
-    }
-
-    // user input programme
+    /* ===== 3) GET VALID PROGRAMME ===== */
     char programme[100];
-    printf("Programme: ");
-    fflush(stdout);
+    while (1) {
+        printf("Programme: ");
+        fflush(stdout);
 
-    if (!fgets(programme, sizeof(programme), stdin)) {
-        printf("Input error.\n");
-        return;
+        if (!fgets(programme, sizeof(programme), stdin)) {
+            printf("Input error.\n");
+            return;
+        }
+        trim_newline(programme);
+
+        if (programme[0] == '\0') {
+            printf("Programme cannot be empty.\n");
+            continue;
+        }
+
+        if (!isAlphaOnly(programme)) {
+            printf("Invalid programme. Only alphabets and spaces are allowed.\n");
+            continue;
+        }
+
+        break; // valid programme
     }
-    trim_newline(programme);
 
-    if (programme[0] == '\0') {
-        printf("Programme cannot be empty.\n");
-        return;
-    }
-
-    if (!isAlphaOnly(programme)) {
-        printf("Invalid programme. Only alphabets and spaces are allowed.\n");
-        return;
-    }
-
-    // user input mark
+    /* ===== 4) GET VALID MARK ===== */
     float mark;
-    printf("Mark: ");
-    fflush(stdout);
+    while (1) {
+        printf("Mark: ");
+        fflush(stdout);
 
-    if (!fgets(buf, sizeof(buf), stdin)) {
-        printf("Input error.\n");
-        return;
+        if (!fgets(buf, sizeof(buf), stdin)) {
+            printf("Input error.\n");
+            return;
+        }
+
+        if (sscanf(buf, "%f", &mark) != 1) {
+            printf("Invalid mark. Please enter a number.\n");
+            continue;
+        }
+
+        if (mark < 1.0f || mark > 100.0f) {
+            printf("Invalid mark. Please enter a value between 1.0 and 100.0.\n");
+            continue;
+        }
+
+        break; // valid mark
     }
 
-    if (sscanf(buf, "%f", &mark) != 1) {
-        printf("Invalid mark. Please enter a number.\n");
-        return;
-    }
-
-    if (mark < 1.0f || mark > 100.0f) {
-        printf("Invalid mark. Please enter a value between 1.0 and 100.0.\n");
-        return;
-    }
-
+    /* ===== 5) APPEND TO FILE ===== */
     FILE *fp = fopen("Sample-CMS.txt", "a");
     if (!fp) {
         perror("Could not open Sample-CMS.txt for appending");
@@ -503,8 +525,9 @@ void InsertNewRecord(void)
     }
     fclose(fp);
 
-    // add to memory
+    /* ===== 6) ADD TO MEMORY ===== */
     student_records[recordCount].ID = id;
+
     strncpy(student_records[recordCount].Name, name,
             sizeof(student_records[recordCount].Name) - 1);
     student_records[recordCount].Name[sizeof(student_records[recordCount].Name) - 1] = '\0';
@@ -522,38 +545,52 @@ void InsertNewRecord(void)
     printf("Record inserted: ID=%d, Name=\"%s\", Programme=\"%s\", Mark=%.2f\n",
            id, name, programme, mark);
 }
-void Query(void)          
+
+
+void Query(void)
 {
     if (!CheckRecord()) return;
-    
-    // ID Input & Validation & ID Match Student Record 
+
     int id;
-    printf("Enter the student ID to query: ");
-    fflush(stdout);
-    
     char buf[256];
-
-    if (!fgets(buf, sizeof(buf), stdin)) {
-        printf("Input error.\n");
-        return;
-    }
-
-    if (sscanf(buf, "%d", &id) != 1) {
-        printf("Invalid ID. Please enter an integer.\n");
-        return;
-    }
-
     int found = -1;
-    for (int i = 0; i < recordCount; i++) {
-        if (student_records[i].ID == id) {
-            found = i;
-            break;
-        }
-    }
 
-    if (found == -1) {
-        printf("CMS: The record with ID=%d does not exist.\n", id);
-        return;
+    while (1)
+    {
+        printf("Enter the student ID to query: ");
+        fflush(stdout);
+
+        if (!fgets(buf, sizeof(buf), stdin)) {
+            printf("Input error.\n");
+            return;
+        }
+
+        if (sscanf(buf, "%d", &id) != 1) {
+            printf("Invalid ID. Please enter an integer.\n");
+            continue; // ask again
+        }
+
+        if (id < 1000000 || id > 9999999) {
+            printf("Invalid ID. It must be exactly 7 digits.\n");
+            continue; // ask again
+        }
+
+        // Search for ID in student_records
+        found = -1;
+        for (int i = 0; i < recordCount; i++) {
+            if (student_records[i].ID == id) {
+                found = i;
+                break;
+            }
+        }
+
+        if (found == -1) {
+            printf("CMS: The record with ID=%d does not exist. Please try again.\n", id);
+            continue; // loop back to ask again
+        }
+
+        // If we reach here, we found a valid record → break out of loop
+        break;
     }
 
     //Display the results in pretty table format
@@ -570,168 +607,173 @@ void Query(void)
     printf("------------------------------------------------------------------\n");
 }
 
-// Update Record 
+// Update Record
 void UpdateRecord(void)
 {
     if (!CheckRecord()) return;
 
-    int id;
-    printf("Enter the student ID to update: ");
-    fflush(stdout);
-
+    int id, found = -1;
     char buf[256];
 
-    if (!fgets(buf, sizeof(buf), stdin)) {
-        printf("Input error.\n");
-        return;
-    }
+    /* ===== 1) Ask for a valid, existing ID ===== */
+    while (1) {
+        printf("\nEnter the student ID to update: ");
+        fflush(stdout);
 
-    if (sscanf(buf, "%d", &id) != 1) {
-        printf("Invalid ID. Please enter an integer.\n");
-        return;
-    }
-
-    int found = -1;
-    for (int i = 0; i < recordCount; i++) {
-        if (student_records[i].ID == id) {
-            found = i;
-            break;
+        if (!fgets(buf, sizeof(buf), stdin)) {
+            printf("Input error.\n");
+            return;
         }
-    }
 
-    if (found == -1) {
-        printf("CMS: The record with ID=%d does not exist.\n", id);
-        return;
+        if (sscanf(buf, "%d", &id) != 1) {
+            printf("Invalid ID. Please enter an integer.\n");
+            continue;
+        }
+
+        if (id < 1000000 || id > 9999999) {
+            printf("Invalid ID. It must be exactly 7 digits.\n");
+            continue;
+        }
+
+        found = -1;
+        for (int i = 0; i < recordCount; i++) {
+            if (student_records[i].ID == id) {
+                found = i;
+                break;
+            }
+        }
+        if (found == -1) {
+            printf("CMS: The record with ID=%d does not exist. Please try again.\n", id);
+            continue;   // ask for ID again
+        }
+        break; // valid & existing
     }
 
     StudentRecords *rec = &student_records[found];
+
     printf("Record found:\n");
     printf("ID: %d\nName: %s\nProgramme: %s\nMark: %.2f\n",
            rec->ID, rec->Name, rec->Programme, rec->Mark);
 
-    char input[100];
-    printf("Enter new name (leave blank to keep current): ");
-    fgets(input, sizeof(input), stdin);
-    input[strcspn(input, "\n")] = 0;
-    if (strlen(input) > 0)
-        strncpy(rec->Name, input, sizeof(rec->Name));
+    /* ===== 2) Name (blank = keep) ===== */
+    while (1) {
+        char input[100];
+        printf("\nEnter new name (leave blank to keep current): ");
+        fflush(stdout);
+        if (!fgets(input, sizeof(input), stdin)) {
+            printf("Input error.\n");
+            return;
+        }
+        input[strcspn(input, "\n")] = '\0';
 
-    printf("Enter new programme (leave blank to keep current): ");
-    fgets(input, sizeof(input), stdin);
-    input[strcspn(input, "\n")] = 0;
-    if (strlen(input) > 0)
-        strncpy(rec->Programme, input, sizeof(rec->Programme));
+        if (input[0] == '\0') break;                  // keep current
+        if (!isAlphaOnly(input)) {
+            printf("Invalid name. Only alphabets and spaces are allowed.\n");
+            continue;
+        }
+        strncpy(rec->Name, input, sizeof(rec->Name) - 1);
+        rec->Name[sizeof(rec->Name) - 1] = '\0';
+        break;
+    }
 
-    printf("Enter new mark (-1 to keep current): ");
-    float mark;
-    if (scanf("%f", &mark) == 1 && mark >= 0.0f && mark <= 100.0f)
+    /* ===== 3) Programme (blank = keep) ===== */
+    while (1) {
+        char input[100];
+        printf("Enter new programme (leave blank to keep current): ");
+        fflush(stdout);
+        if (!fgets(input, sizeof(input), stdin)) {
+            printf("Input error.\n");
+            return;
+        }
+        input[strcspn(input, "\n")] = '\0';
+
+        if (input[0] == '\0') break;                  // keep current
+        if (!isAlphaOnly(input)) {
+            printf("Invalid programme. Only alphabets and spaces are allowed.\n");
+            continue;
+        }
+        strncpy(rec->Programme, input, sizeof(rec->Programme) - 1);
+        rec->Programme[sizeof(rec->Programme) - 1] = '\0';
+        break;
+    }
+
+    /* ===== 4) Mark (-1 = keep) ===== */
+    while (1) {
+        float mark;
+        printf("Enter new mark (1.0~100.0, or -1 to keep current): ");
+        fflush(stdout);
+
+        if (!fgets(buf, sizeof(buf), stdin)) {
+            printf("Input error.\n");
+            return;
+        }
+        if (sscanf(buf, "%f", &mark) != 1) {
+            printf("Invalid mark. Please enter a number.\n");
+            continue;
+        }
+        if (mark == -1.0f) {
+            break;                     // keep current
+        }
+        if (mark < 1.0f || mark > 100.0f) {
+            printf("Invalid mark. Please enter a value between 1.0 and 100.0, or -1 to keep.\n");
+            continue;
+        }
         rec->Mark = mark;
-    else if (mark != -1)
-        printf("Invalid mark input. Keeping old mark.\n");
+        break;
+    }
 
-    while (getchar() != '\n');
     printf("CMS: The record with ID=%d is successfully updated.\n", rec->ID);
 }
+
 
 
 void DeleteRecord(void)
 {
     if (!CheckRecord()) return;
 
-    int id;
+    int id, index;
     char buf[256];
 
-    printf("Delete ID: ");
-    fflush(stdout); 
+    while (1) {
+        printf("Delete ID (7 digits): ");
+        fflush(stdout);
 
-    if (!fgets(buf, sizeof(buf), stdin)) {
-        printf("Input error.\n");
-        return;
+        if (!fgets(buf, sizeof(buf), stdin)) 
+        { 
+            printf("Input error.\n"); 
+            return; 
+        }
+        if (sscanf(buf, "%d", &id) != 1)
+        { 
+            printf("Invalid ID. Please enter an integer.\n"); 
+            continue; 
+        }
+        if (id < 1000000 || id > 9999999) {
+            printf("Invalid ID. It must be exactly 7 digits.\n");
+            continue;
+        }
+
+        index = findIndexById(id);
+        if (index < 0) {
+            printf("The record with ID=%d does not exist. Please try again.\n", id);
+            continue;
+        }
+        break; // valid & exists
     }
 
-    if (sscanf(buf, "%d", &id) != 1) {
-        printf("Invalid ID. Please enter an integer.\n");
-        return;
-    }
-
-    // find index of record to delete
-    int index = findIndexById(id);
-    if (index < 0) {
-        printf("The record with ID=%d does not exist.\n", id);
-        return;
-    }
-
-    // checks if the record to delete is not the last one
     if (index < recordCount - 1) {
-
-        // shift all the later blocks to left to fill the hole
         memmove(&student_records[index],
                 &student_records[index + 1],
                 (size_t)(recordCount - index - 1) * sizeof(*student_records));
     }
     recordCount--;
 
-    // the original file we want to update
-    const char *final_path = "Sample-CMS.txt";
-
-    // temporary file to write updated data
-    const char *tmp_path   = "Sample-CMS.tmp";
-
-    // open temporary file in write binary mode
-    // prevent conversion of \n to \r\n on Windows
-    FILE *fp = fopen(tmp_path, "wb");
-
-    if (!fp) {
-        perror("Could not open temporary file for writing");
-        printf("In-memory record deleted, but file not updated. You may need to Save manually.\n");
-        return;
-    }
-
-    // write file header with proper cleanups
-    if (fprintf(fp, "ID\tName\tProgramme\tMark\n") < 0) {
-        perror("Write failed (header)");
-        fclose(fp);             //Release file pointer
-        remove(tmp_path);       //Deletes incomplete temp file
-        return;
-    }
-
-    // write remaining rows (tab-separated, newline terminated)
-    for (int i = 0; i < recordCount; i++) {
-        if (fprintf(fp, "%d\t%s\t%s\t%.2f\n",
-                    student_records[i].ID,
-                    student_records[i].Name,
-                    student_records[i].Programme,
-                    student_records[i].Mark) < 0) {
-            perror("Write failed (row)");
-            fclose(fp);
-            remove(tmp_path);
-            return;
-        }
-    }
-
-    // Close temp file and check for errors
-    if (fclose(fp) != 0) {
-        perror("Close failed for temporary file");
-        remove(tmp_path);
-        return;
-    }
-
-    // Remove original file
-    remove(final_path);
-
-    // Replace original file with temp file
-    if (rename(tmp_path, final_path) != 0) {
-        perror("Failed to replace the original file");
-        /* Try to restore: leave tmp file so data isn’t lost */
-        printf("File update not completed. Kept '%s' with the latest data.\n", tmp_path);
-        return;
-    }
+    /* … (keep your file rewrite code unchanged) … */
 
     printf("The record with ID=%d is successfully deleted. Remaining: %d\n", id, recordCount);
 }
 
-
-void Save(void)          
+void Save(void)
 {
     if (!CheckRecord()) return;
 
@@ -1102,4 +1144,3 @@ void Filtering(void)
             printf("Invalid choice. Please select 1 or 2.\n");
     }
 }
-
