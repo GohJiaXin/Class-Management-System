@@ -1,4 +1,8 @@
-ID	Name	Programme	Mark
+Database Name: Sample-CMS
+Authors: Assistant Prof Oran Zane Devilly
+
+Table Name: StudentRecords
+ID	Name		Programme		Mark
 2301234	Joshua Chen	Software Engineering	70.50
 2201234	Isaac Teo	Computer Science	63.40
 2304567	John Levoy	Digital Supply Chain	85.90
@@ -52,3 +56,5 @@ ID	Name	Programme	Mark
 2352345	Kai Liew	Software Engineering	72.95
 2353456	Zoey Tan	Information Systems	85.75
 2354567	Theo Lim	Computer Science	80.30
+
+
