@@ -34,9 +34,9 @@ can work on merged SORT/FILTER function if have extra time but not important
 **** ERRORS/TROUBLESHOOT **** (Please note down if fixed thanks, DONT REMOVE as we can use it as test case)
 1. Anytime when user enters an input, system should allow the user to retry before returning to menu, possible to 
     make it such that user can leave blank to return to menu( is this needed? need your opinions on this - jason )
-2. When inserting new record, currently inputting name does not validate if the user input ONLY has whitespace in the input for name and programme
-3. When inserting new record, inputing name and programme has no character limitations. need to set such that it wont go beyond the system formatting.
-4. same thing as 3 but for Update Record 
+2. When inserting new record, currently inputting name does not validate if the user input ONLY has whitespace in the input for name and programme (Solved by ??)
+3. When inserting new record, inputing name and programme has no character limitations. need to set such that it wont go beyond the system formatting. (Solved By Jason)
+4. same thing as 3 but for Update Record  (Solved by Jason)
 5. Edit Sorting function such that it shows whether it is sorted numerically or alphabetically (SOLVED by Jason)
 6. Filtering Function should not have name search as it is already covered by Query, and for programming, can consider to list the existing programmes in
     in the database then ask for input when user chooses to search by programme
@@ -453,6 +453,12 @@ void InsertNewRecord(void)
         if (!isAlphaOnly(name)) {
             printf("Invalid name. Only alphabets and spaces are allowed.\n");
             continue;
+
+        } 
+        
+        if (strlen(name) > 20) {
+            printf("Name cannot exceed 20 characters. Please enter a shorter name.\n");
+            continue;
         }
 
         break; // valid name
@@ -477,6 +483,10 @@ void InsertNewRecord(void)
 
         if (!isAlphaOnly(programme)) {
             printf("Invalid programme. Only alphabets and spaces are allowed.\n");
+            continue;
+        }
+        if (strlen(programme) > 25) {
+            printf("Programme cannot exceed 25 characters. Please enter a shorter programme.\n");
             continue;
         }
 
@@ -676,6 +686,10 @@ void UpdateRecord(void)
             printf("Invalid name. Only alphabets and spaces are allowed.\n");
             continue;
         }
+        if (strlen(input) > 20) {
+            printf("Name cannot exceed 20 characters. Please enter a shorter name.\n");
+            continue;
+        }
         strncpy(rec->Name, input, sizeof(rec->Name) - 1);
         rec->Name[sizeof(rec->Name) - 1] = '\0';
         break;
@@ -695,6 +709,10 @@ void UpdateRecord(void)
         if (input[0] == '\0') break;                  // keep current
         if (!isAlphaOnly(input)) {
             printf("Invalid programme. Only alphabets and spaces are allowed.\n");
+            continue;
+        }
+        if (strlen(input) > 25) {
+            printf("Programme cannot exceed 25 characters. Please enter a shorter programme.\n");
             continue;
         }
         strncpy(rec->Programme, input, sizeof(rec->Programme) - 1);
@@ -1103,9 +1121,9 @@ void Filtering(void)
     int choice;
     char buf[256];
 
-    printf("\n--- Advanced Search Menu ---\n");
-    printf("1. Search by Name or Programme\n");
-    printf("2. Search by Marks Range\n");
+    printf("\nPlease choose one category to filter by:\n");
+    printf("1. Filter by Programme\n");
+    printf("2. Filter by Marks\n");
     printf("Enter your choice: ");
 
     if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%d", &choice) != 1) {
@@ -1115,53 +1133,70 @@ void Filtering(void)
 
     switch (choice) {
         case 1: {
-            char keyword[100];
-            printf("Enter keyword to search by Name or Programme: ");
-            fflush(stdout);
-            if (!fgets(keyword, sizeof(keyword), stdin)) {
-                printf("Input error.\n");
-                return;
-            }
-            keyword[strcspn(keyword, "\n")] = 0;
-            if (strlen(keyword) == 0) {
-                printf("Keyword cannot be empty.\n");
-                return;
-            }
-            for (int i = 0; keyword[i]; i++) keyword[i] = tolower(keyword[i]);
-
-            printf("\nMatching Records:\n");
-            printf("%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
-            printf("------------------------------------------------------------\n");
-
-            int found = 0;
+            // Collect unique programmes
+            char uniqueProgrammes[100][26]; // max 100 unique programmes, 25 chars + '\0'
+            int uniqueCount = 0;
             for (int i = 0; i < recordCount; i++) {
-                char nameLower[100], progLower[100];
-                strncpy(nameLower, student_records[i].Name, sizeof(nameLower));
-                nameLower[sizeof(nameLower) - 1] = '\0';
-                strncpy(progLower, student_records[i].Programme, sizeof(progLower));
-                progLower[sizeof(progLower) - 1] = '\0';
-                for (int j = 0; nameLower[j]; j++) nameLower[j] = tolower(nameLower[j]);
-                for (int j = 0; progLower[j]; j++) progLower[j] = tolower(progLower[j]);
-
-                if (strstr(nameLower, keyword) || strstr(progLower, keyword)) {
-                    printf("%-10d %-20s %-20s %.2f\n",
-                           student_records[i].ID,
-                           student_records[i].Name,
-                           student_records[i].Programme,
-                           student_records[i].Mark);
-                    found++;
+                int found = 0;
+                for (int j = 0; j < uniqueCount; j++) {
+                    if (strcmp(student_records[i].Programme, uniqueProgrammes[j]) == 0) {
+                        found = 1;
+                        break;
+                    }
+                }
+                if (!found) {
+                    strncpy(uniqueProgrammes[uniqueCount], student_records[i].Programme, 25);
+                    uniqueProgrammes[uniqueCount][25] = '\0'; // safety null terminate
+                    uniqueCount++;
                 }
             }
 
-            if (found == 0) {
-                printf("No matching records found for \"%s\".\n", keyword);
-            } else {
-                printf("------------------------------------------------------------\n");
-                printf("Total matches: %d\n", found);
+            // Print existing programmes
+            printf("\nExisting programmes:\n");
+            for (int i = 0; i < uniqueCount; i++) {
+                printf("%d. %s\n", i + 1, uniqueProgrammes[i]);
+            }
+
+            // Prompt user to choose a programme by number
+            char input[100];
+            int choice = 0;
+            while (1) {
+                printf("\nEnter the number of the programme to filter by: ");
+                if (!fgets(input, sizeof(input), stdin) || sscanf(input, "%d", &choice) != 1) {
+                    printf("Invalid input. Please enter a number.\n");
+                    continue;
+                }
+                if (choice < 1 || choice > uniqueCount) {
+                    printf("Please enter a number between 1 and %d.\n", uniqueCount);
+                    continue;
+                }
+                break;
+            }
+
+            const char* chosenProgramme = uniqueProgrammes[choice - 1];
+
+            printf("Filtering records by programme: %s\n", chosenProgramme);
+
+            // Filter and display records matching chosen programme
+            printf("%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
+            printf("------------------------------------------------------------\n");
+
+            int foundCount = 0;
+            for (int i = 0; i < recordCount; i++) {
+                if (strcmp(student_records[i].Programme, chosenProgramme) == 0) {
+                    printf("%-10d %-20s %-20s %.2f\n",
+                        student_records[i].ID,
+                        student_records[i].Name,
+                        student_records[i].Programme,
+                        student_records[i].Mark);
+                    foundCount++;
+                }
+            }
+            if (foundCount == 0) {
+                printf("No matching records found.\n");
             }
             break;
         }
-
         case 2: {
             float minMark, maxMark;
             char extraChar;
