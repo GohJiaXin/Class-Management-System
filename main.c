@@ -40,7 +40,7 @@ can work on merged SORT/FILTER function if have extra time but not important
 5. Edit Sorting function such that it shows whether it is sorted numerically or alphabetically (SOLVED by Jason)
 6. Filtering Function should not have name search as it is already covered by Query, and for programming, can consider to list the existing programmes in
     in the database then ask for input when user chooses to search by programme
-7. Sorting Function does not straight away return invalid when choosing an invalid Category choice 
+7. Sorting Function does not straight away return invalid when choosing an invalid Category choice (SOLVED by Jiaxin)
 8. Filter Function No error returned when user enters for eg. 30 40 for minimum mark then 50 for maximum mark
 9. When user using the Insert, Query, Delete and Update function, when user enter invalid value1 (eg. string instead of integer for ID),
     system should allow user to retry instead of returning to main menu immediately (solved)
@@ -952,11 +952,8 @@ void SummaryStats(void)
     printf("==================================================\n");
 }
 
-
-
 void Sorting(void)
 {
-
     // Check if there are records
     if (!CheckRecord()) return;
 
@@ -978,20 +975,40 @@ void Sorting(void)
             continue;
         }
 
+        // Clear buffer after reading category
+        while (getchar() != '\n');
+
+        // Exit option
         if (sort_category == 5) {
             printf("Returning to main menu...\n");
             break;
         }
 
-        printf("\nSelect order:\n1. Ascending\n2. Descending\nEnter your choice: ");
-        if (scanf("%d", &order) != 1 || (order != 1 && order != 2)) {
-            printf("Invalid order choice.\n");
-            while (getchar() != '\n');
-            continue;
+        // Validate category choice BEFORE asking for order
+        if (sort_category < 1 || sort_category > 5) {
+            printf("Invalid category choice. Please select 1-5.\n");
+            continue;  // Go back to start of loop
         }
 
-        // Clear buffer
-        while (getchar() != '\n');
+        // Ask for sort order with validation loop
+        while (1) {
+            printf("\nSelect order:\n1. Ascending\n2. Descending\nEnter your choice: ");
+            if (scanf("%d", &order) != 1) {
+                printf("Invalid input. Please enter 1 or 2.\n");
+                while (getchar() != '\n');
+                continue;  // Ask for order again
+            }
+            
+            // Clear buffer
+            while (getchar() != '\n');
+            
+            if (order == 1 || order == 2) {
+                break;  // Valid order, exit the inner loop
+            } else {
+                printf("Invalid order choice. Please enter 1 or 2.\n");
+                // Loop continues, ask again
+            }
+        }
 
         // Call appropriate sort function
         switch (sort_category) {
@@ -1000,28 +1017,26 @@ void Sorting(void)
             case 3: sortByProgramme(order); break;
             case 4: sortByMarks(order); break;
             default:
-                printf("Invalid category choice.\n");
-                break;
+                // Safety check - return to category selection
+                printf("Invalid category choice. Returning to menu.\n");
+                continue;  // Go back to start of do-while loop
         }
 
-       //Display the results in pretty table format
-    printf("\nSorted Results:\n");
-    printf("\n%-10s %-20s %-27s %s\n", "ID", "Name", "Programme", "Mark");
-    printf("===============================================================\n");
-    
-    for (int i = 0; i < recordCount; i++) {
-        printf("%-10d %-20s %-27s %.2f\n", 
-               student_records[i].ID, 
-               student_records[i].Name, 
-               student_records[i].Programme, 
-               student_records[i].Mark);
-    }
-    //printf("Total records: %d\n", recordCount);
-    //Bottom Border
-    printf("===============================================================\n");
+        // Display the results in pretty table format
+        printf("\nSorted Results:\n");
+        printf("\n%-10s %-20s %-27s %s\n", "ID", "Name", "Programme", "Mark");
+        printf("===============================================================\n");
+        
+        for (int i = 0; i < recordCount; i++) {
+            printf("%-10d %-20s %-27s %.2f\n", 
+                   student_records[i].ID, 
+                   student_records[i].Name, 
+                   student_records[i].Programme, 
+                   student_records[i].Mark);
+        }
+        printf("===============================================================\n");
 
     } while (sort_category != 5);
-
 }
 void sortByID(int order)
 {
@@ -1197,6 +1212,7 @@ void Filtering(void)
             printf("Invalid choice. Please select 1 or 2.\n");
     }
 }
+
 
 
 
