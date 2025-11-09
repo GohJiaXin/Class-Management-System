@@ -43,9 +43,9 @@ can work on merged SORT/FILTER function if have extra time but not important
 7. Sorting Function does not straight away return invalid when choosing an invalid Category choice (SOLVED by Jiaxin)
 8. Filter Function No error returned when user enters for eg. 30 40 for minimum mark then 50 for maximum mark (SOLVED by Jiaxin)
 9. When user using the Insert, Query, Delete and Update function, when user enter invalid value1 (eg. string instead of integer for ID),
-    system should allow user to retry instead of returning to main menu immediately (solved)
+    system should allow user to retry instead of returning to main menu immediately (solved by ZhiHao)
 10. In IsAlpha function, string without any alphabets but only spaces is considered valid, 
-    fixed by adding a flag to check if there is at least one alphabet (solved)
+    fixed by adding a flag to check if there is at least one alphabet (solved by ZhiHao)
 
 
 ***** OUTDATED ****
@@ -1256,3 +1256,4 @@ void Filtering(void)
             printf("Invalid choice. Please select 1 or 2.\n");
     }
 }
+
