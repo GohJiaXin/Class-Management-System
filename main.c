@@ -590,7 +590,7 @@ void Query(void)
         }
 
         if (found == -1) {
-            printf("CMS: The record with ID=%d does not exist. Please try again.\n", id);
+            printf("The record with ID=%d does not exist. Please try again.\n", id);
             continue; // loop back to ask again
         }
 
@@ -599,7 +599,7 @@ void Query(void)
     }
 
     //Display the results in pretty table format
-    printf("\nCMS: The record with ID= %d is found in the data table.\n", id);
+    printf("\nThe record with ID= %d is found in the data table.\n", id);
     printf("------------------------------------------------------------------");
     printf("\n%-10s %-20s %-27s %s\n", "ID", "Name", "Programme", "Mark");
     printf("------------------------------------------------------------------\n");
@@ -648,7 +648,7 @@ void UpdateRecord(void)
             }
         }
         if (found == -1) {
-            printf("CMS: The record with ID=%d does not exist. Please try again.\n", id);
+            printf("The record with ID=%d does not exist. Please try again.\n", id);
             continue;   // ask for ID again
         }
         break; // valid & existing
@@ -727,7 +727,7 @@ void UpdateRecord(void)
         break;
     }
 
-    printf("CMS: The record with ID=%d is successfully updated.\n", rec->ID);
+    printf("The record with ID=%d is successfully updated.\n", rec->ID);
 }
 void DeleteRecord(void)
 {
@@ -758,7 +758,7 @@ void DeleteRecord(void)
 
         index = findIndexById(id);
         if (index < 0) {
-            printf("CMS: The record with ID=%d does not exist.\n", id);
+            printf("The record with ID=%d does not exist.\n", id);
             return;
         }
 
@@ -793,8 +793,8 @@ void DeleteRecord(void)
     recordCount--;
 
     /* ===== 4) Safely update the file ===== */
-    const char *final_path = "Sample-CMS.txt";
-    const char *tmp_path   = "Sample-CMS.tmp";
+    const char *final_path = "P4_6-CMS.txt";
+    const char *tmp_path   = "P4_6-CMS.tmp";
 
     FILE *fp = fopen(tmp_path, "wb");
     if (!fp) {
@@ -816,7 +816,7 @@ void DeleteRecord(void)
     remove(final_path);
     rename(tmp_path, final_path);
 
-    printf("CMS: The record with ID=%d is successfully deleted.\n", id);
+    printf("The record with ID=%d is successfully deleted.\n", id);
 }
 
 
@@ -892,7 +892,7 @@ void AttendanceAndGrading(void)
         strcpy(student_records[i].Grade, grade);
     }
 
-    printf("\nCMS: Attendance and grading update complete.\n");
+    printf("\nAttendance and grading update complete.\n");
 }
 
 
