@@ -37,12 +37,16 @@ can work on merged SORT/FILTER function if have extra time but not important
 2. When inserting new record, currently inputting name does not validate if the user input ONLY has whitespace in the input for name and programme
 3. When inserting new record, inputing name and programme has no character limitations. need to set such that it wont go beyond the system formatting.
 4. same thing as 3 but for Update Record 
-5. Edit Sorting function such that it shows whether it is sorted numerically or alphabetically
+5. Edit Sorting function such that it shows whether it is sorted numerically or alphabetically (SOLVED by Jason)
 6. Filtering Function should not have name search as it is already covered by Query, and for programming, can consider to list the existing programmes in
     in the database then ask for input when user chooses to search by programme
-7. When user using the Insert, Query, Delete and Update function, when user enter invalid value1 (eg. string instead of integer for ID),
-    system should allow user to retry instead of returning to main menu immediately
-8. In IsAlpha function, string without any alphabets but only spaces is considered valid, fixed by adding a flag to check if there is at least one alphabet
+7. Sorting Function does not straight away return invalid when choosing an invalid Category choice (SOLVED by Jiaxin)
+8. Filter Function No error returned when user enters for eg. 30 40 for minimum mark then 50 for maximum mark (SOLVED by Jiaxin)
+9. When user using the Insert, Query, Delete and Update function, when user enter invalid value1 (eg. string instead of integer for ID),
+    system should allow user to retry instead of returning to main menu immediately (solved by ZhiHao)
+10. In IsAlpha function, string without any alphabets but only spaces is considered valid, 
+    fixed by adding a flag to check if there is at least one alphabet (solved by ZhiHao)
+11. For returnMainMenu function when user enters "n", it still returns invalid input when theres toupper funtion (solved by Zhi Hao)
 
 
 ***** OUTDATED ****
@@ -154,30 +158,33 @@ static int findIndexById(int id) {
 int ReturnMainMenu(void)
 {
     char choice;
+    int c;  // use a separate variable for clearing buffer
     printf("Return to main menu? (Y/N): ");
-    fflush(stdout);  // make sure the prompt prints immediately
+    fflush(stdout);
 
-    if (scanf(" %c", &choice) != 1) {   // notice the space before %c to skip newlines
+    if (scanf(" %c", &choice) != 1) {
         printf("Invalid input.\n");
-        while ((choice = getchar()) != '\n' && choice != EOF);
-        return 0;   // stay here if input fails
+        while ((c = getchar()) != '\n' && c != EOF);
+        return 0;
     }
 
-    while ((choice = getchar()) != '\n' && choice != EOF);  // clear once
+    // Clear leftover input properly
+    while ((c = getchar()) != '\n' && c != EOF);
 
-    // convert to uppercase so it works with 'y' or 'Y'
+    // Convert to uppercase so it works with both 'y' and 'Y'
     choice = toupper(choice);
 
     if (choice == 'Y') {
         return 1;   // go back to main menu
     } else if (choice == 'N') {
         printf("Goodbye!\n");
-        exit(0);    // end program
+        exit(0);
     } else {
         printf("Invalid choice. Returning to main menu by default.\n");
         return 1;
     }
 }
+
 
 int main(void)
 {
@@ -272,7 +279,7 @@ int CheckRecord(void)
 
 void readFile(void) 
 {
-    FILE *pFile = fopen("Sample-CMS.txt", "r");
+    FILE *pFile = fopen("P4_6-CMS.txt", "r");
     if (!pFile) {
         perror("Could not open the file");
         return;
@@ -501,9 +508,9 @@ void InsertNewRecord(void)
     }
 
     /* ===== 5) APPEND TO FILE ===== */
-    FILE *fp = fopen("Sample-CMS.txt", "a");
+    FILE *fp = fopen("P4_6-CMS.txt", "a");
     if (!fp) {
-        perror("Could not open Sample-CMS.txt for appending");
+        perror("Could not open P4_6-CMS.txt for appending");
         return;
     }
 
@@ -591,17 +598,18 @@ void Query(void)
         break;
     }
 
-    // Display the results in pretty table format
-    printf("\nCMS: The record with ID=%d is found in the data table.\n", id);
-    printf("------------------------------------------------------------");
-    printf("\n%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
-    printf("------------------------------------------------------------\n");
-    printf("%-10d %-20s %-20s %.2f\n",
-           student_records[found].ID,
-           student_records[found].Name,
-           student_records[found].Programme,
-           student_records[found].Mark);
-    printf("------------------------------------------------------------\n");
+    //Display the results in pretty table format
+    printf("\nCMS: The record with ID= %d is found in the data table.\n", id);
+    printf("------------------------------------------------------------------");
+    printf("\n%-10s %-20s %-27s %s\n", "ID", "Name", "Programme", "Mark");
+    printf("------------------------------------------------------------------\n");
+    printf("%-10d %-20s %-27s %.2f\n", 
+        student_records[found].ID, 
+        student_records[found].Name, 
+        student_records[found].Programme, 
+        student_records[found].Mark);
+    //Bottom Border
+    printf("------------------------------------------------------------------\n");
 }
 
 // Update Record
@@ -721,9 +729,6 @@ void UpdateRecord(void)
 
     printf("CMS: The record with ID=%d is successfully updated.\n", rec->ID);
 }
-
-
-
 void DeleteRecord(void)
 {
     if (!CheckRecord()) return;
@@ -731,20 +736,21 @@ void DeleteRecord(void)
     int id, index;
     char buf[256];
 
+    /* ===== 1) Get valid ID ===== */
     while (1) {
-        printf("Delete ID (7 digits): ");
+        printf("DELETE ID (7 digits): ");
         fflush(stdout);
 
-        if (!fgets(buf, sizeof(buf), stdin)) 
-        { 
+        if (!fgets(buf, sizeof(buf), stdin)) { 
             printf("Input error.\n"); 
             return; 
         }
-        if (sscanf(buf, "%d", &id) != 1)
-        { 
+
+        if (sscanf(buf, "%d", &id) != 1) { 
             printf("Invalid ID. Please enter an integer.\n"); 
             continue; 
         }
+
         if (id < 1000000 || id > 9999999) {
             printf("Invalid ID. It must be exactly 7 digits.\n");
             continue;
@@ -752,12 +758,33 @@ void DeleteRecord(void)
 
         index = findIndexById(id);
         if (index < 0) {
-            printf("The record with ID=%d does not exist. Please try again.\n", id);
-            continue;
+            printf("CMS: The record with ID=%d does not exist.\n", id);
+            return;
         }
-        break; // valid & exists
+
+        break; // valid and exists
     }
 
+    /* ===== 2) Single confirmation ===== */
+    char confirm;
+    printf("Are you sure you want to delete record with ID=%d? Type \"Y\" to Confirm or type \"N\" to cancel.\n", id);
+    fflush(stdout);
+
+    if (scanf(" %c", &confirm) != 1) {
+        printf("Invalid input.\n");
+        while (getchar() != '\n');
+        return;
+    }
+
+    while (getchar() != '\n'); // clear input buffer
+    confirm = toupper(confirm);
+
+    if (confirm != 'Y') {
+        printf("The deletion is cancelled.\n");
+        return;
+    }
+
+    /* ===== 3) Remove from in-memory array ===== */
     if (index < recordCount - 1) {
         memmove(&student_records[index],
                 &student_records[index + 1],
@@ -765,18 +792,43 @@ void DeleteRecord(void)
     }
     recordCount--;
 
-    /* … (keep your file rewrite code unchanged) … */
+    /* ===== 4) Safely update the file ===== */
+    const char *final_path = "Sample-CMS.txt";
+    const char *tmp_path   = "Sample-CMS.tmp";
 
-    printf("The record with ID=%d is successfully deleted. Remaining: %d\n", id, recordCount);
+    FILE *fp = fopen(tmp_path, "wb");
+    if (!fp) {
+        perror("Could not open temporary file for writing");
+        printf("In-memory record deleted, but file not updated. You may need to Save manually.\n");
+        return;
+    }
+
+    fprintf(fp, "ID\tName\tProgramme\tMark\n");
+    for (int i = 0; i < recordCount; i++) {
+        fprintf(fp, "%d\t%s\t%s\t%.2f\n",
+                student_records[i].ID,
+                student_records[i].Name,
+                student_records[i].Programme,
+                student_records[i].Mark);
+    }
+
+    fclose(fp);
+    remove(final_path);
+    rename(tmp_path, final_path);
+
+    printf("CMS: The record with ID=%d is successfully deleted.\n", id);
 }
+
+
+
 
 void Save(void)
 {
     if (!CheckRecord()) return;
 
-    FILE *fp = fopen("Sample-CMS.txt", "w");
+    FILE *fp = fopen("P4_6-CMS.txt", "w");
     if (!fp) {
-        perror("Could not open Sample-CMS.txt for writing");
+        perror("Could not open P4_6-CMS.txt for writing");
         return;
     }
 
@@ -801,10 +853,10 @@ void Save(void)
     }
 
     if (fclose(fp) != 0) {
-        perror("Close failed for Sample-CMS.txt");
+        perror("Close failed for P4_6-CMS.txt");
         return;
     }
-    printf("All records successfully saved to Sample-CMS.txt\n");
+    printf("All records successfully saved to P4_6-CMS.txt\n");
 }
 
 
@@ -896,11 +948,8 @@ void SummaryStats(void)
     printf("==================================================\n");
 }
 
-
-
 void Sorting(void)
 {
-
     // Check if there are records
     if (!CheckRecord()) return;
 
@@ -909,10 +958,10 @@ void Sorting(void)
 
     do {
         printf("\nPlease choose one category to sort by:\n");
-        printf("1. Sort by ID\n");
-        printf("2. Sort by Name\n");
-        printf("3. Sort by Programme\n");
-        printf("4. Sort by Marks\n");
+        printf("1. Sort Numerically by ID\n");
+        printf("2. Sort Alphabetically by Name\n");
+        printf("3. Sort Alphabetically by Programme\n");
+        printf("4. Sort Numerically by Marks\n");
         printf("5. Exit Sorting\n\n");
         printf("Enter your choice: ");
 
@@ -922,20 +971,40 @@ void Sorting(void)
             continue;
         }
 
+        // Clear buffer after reading category
+        while (getchar() != '\n');
+
+        // Exit option
         if (sort_category == 5) {
             printf("Returning to main menu...\n");
             break;
         }
 
-        printf("\nSelect order:\n1. Ascending\n2. Descending\nEnter your choice: ");
-        if (scanf("%d", &order) != 1 || (order != 1 && order != 2)) {
-            printf("Invalid order choice.\n");
-            while (getchar() != '\n');
-            continue;
+        // Validate category choice BEFORE asking for order
+        if (sort_category < 1 || sort_category > 5) {
+            printf("Invalid category choice. Please select 1-5.\n");
+            continue;  // Go back to start of loop
         }
 
-        // Clear buffer
-        while (getchar() != '\n');
+        // Ask for sort order with validation loop
+        while (1) {
+            printf("\nSelect order:\n1. Ascending\n2. Descending\nEnter your choice: ");
+            if (scanf("%d", &order) != 1) {
+                printf("Invalid input. Please enter 1 or 2.\n");
+                while (getchar() != '\n');
+                continue;  // Ask for order again
+            }
+            
+            // Clear buffer
+            while (getchar() != '\n');
+            
+            if (order == 1 || order == 2) {
+                break;  // Valid order, exit the inner loop
+            } else {
+                printf("Invalid order choice. Please enter 1 or 2.\n");
+                // Loop continues, ask again
+            }
+        }
 
         // Call appropriate sort function
         switch (sort_category) {
@@ -944,28 +1013,26 @@ void Sorting(void)
             case 3: sortByProgramme(order); break;
             case 4: sortByMarks(order); break;
             default:
-                printf("Invalid category choice.\n");
-                break;
+                // Safety check - return to category selection
+                printf("Invalid category choice. Returning to menu.\n");
+                continue;  // Go back to start of do-while loop
         }
 
-       //Display the results in pretty table format
-    printf("\nSorted Results:\n");
-    printf("\n%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
-    printf("===============================================================\n");
-    
-    for (int i = 0; i < recordCount; i++) {
-        printf("%-10d %-20s %-20s %.2f\n", 
-               student_records[i].ID, 
-               student_records[i].Name, 
-               student_records[i].Programme, 
-               student_records[i].Mark);
-    }
-    //printf("Total records: %d\n", recordCount);
-    //Bottom Border
-    printf("===============================================================\n");
+        // Display the results in pretty table format
+        printf("\nSorted Results:\n");
+        printf("\n%-10s %-20s %-27s %s\n", "ID", "Name", "Programme", "Mark");
+        printf("===============================================================\n");
+        
+        for (int i = 0; i < recordCount; i++) {
+            printf("%-10d %-20s %-27s %.2f\n", 
+                   student_records[i].ID, 
+                   student_records[i].Name, 
+                   student_records[i].Programme, 
+                   student_records[i].Mark);
+        }
+        printf("===============================================================\n");
 
     } while (sort_category != 5);
-
 }
 void sortByID(int order)
 {
@@ -1097,18 +1164,63 @@ void Filtering(void)
 
         case 2: {
             float minMark, maxMark;
-            printf("Enter minimum mark: ");
-            fflush(stdout);
-            if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%f", &minMark) != 1 || minMark < 0 || minMark > 100) {
-                printf("Invalid minimum mark.\n");
-                return;
+            char extraChar;
+            
+            // Get minimum mark with validation loop
+            while (1) {
+                printf("Enter minimum mark: ");
+                fflush(stdout);
+                
+                if (!fgets(buf, sizeof(buf), stdin)) {
+                    printf("Input error.\n");
+                    return;
+                }
+                
+                // Check if input contains exactly one float value
+                int scanResult = sscanf(buf, "%f %c", &minMark, &extraChar);
+                
+                if (scanResult != 1) {
+                    printf("Invalid input. Please enter a single number only.\n");
+                    continue;
+                }
+                
+                if (minMark < 0 || minMark > 100) {
+                    printf("Invalid minimum mark. Please enter a value between 0 and 100.\n");
+                    continue;
+                }
+                
+                break; // Valid minimum mark
             }
 
-            printf("Enter maximum mark: ");
-            fflush(stdout);
-            if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%f", &maxMark) != 1 || maxMark < 0 || maxMark > 100 || maxMark < minMark) {
-                printf("Invalid maximum mark.\n");
-                return;
+            // Get maximum mark with validation loop
+            while (1) {
+                printf("Enter maximum mark: ");
+                fflush(stdout);
+                
+                if (!fgets(buf, sizeof(buf), stdin)) {
+                    printf("Input error.\n");
+                    return;
+                }
+                
+                // Check if input contains exactly one float value
+                int scanResult = sscanf(buf, "%f %c", &maxMark, &extraChar);
+                
+                if (scanResult != 1) {
+                    printf("Invalid input. Please enter a single number only.\n");
+                    continue;
+                }
+                
+                if (maxMark < 0 || maxMark > 100) {
+                    printf("Invalid maximum mark. Please enter a value between 0 and 100.\n");
+                    continue;
+                }
+                
+                if (maxMark < minMark) {
+                    printf("Invalid range. Maximum mark (%.2f) cannot be less than minimum mark (%.2f).\n", maxMark, minMark);
+                    continue;
+                }
+                
+                break; // Valid maximum mark
             }
 
             printf("\nStudents with marks between %.2f and %.2f:\n", minMark, maxMark);
@@ -1136,7 +1248,6 @@ void Filtering(void)
             }
             break;
         }
-
         default:
             printf("Invalid choice. Please select 1 or 2.\n");
     }
