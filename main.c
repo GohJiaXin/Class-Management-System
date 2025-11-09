@@ -275,7 +275,7 @@ int CheckRecord(void)
 
 void readFile(void) 
 {
-    FILE *pFile = fopen("Sample-CMS.txt", "r");
+    FILE *pFile = fopen("P4_6-CMS.txt", "r");
     if (!pFile) {
         perror("Could not open the file");
         return;
@@ -504,9 +504,9 @@ void InsertNewRecord(void)
     }
 
     /* ===== 5) APPEND TO FILE ===== */
-    FILE *fp = fopen("Sample-CMS.txt", "a");
+    FILE *fp = fopen("P4_6-CMS.txt", "a");
     if (!fp) {
-        perror("Could not open Sample-CMS.txt for appending");
+        perror("Could not open P4_6-CMS.txt for appending");
         return;
     }
 
@@ -770,8 +770,8 @@ void DeleteRecord(void)
     recordCount--;
 
     /* ===== 3) Safely update file ===== */
-    const char *final_path = "Sample-CMS.txt";
-    const char *tmp_path   = "Sample-CMS.tmp";
+    const char *final_path = "P4_6-CMS.txt";
+    const char *tmp_path   = "P4_6-CMS.tmp";
 
     FILE *fp = fopen(tmp_path, "wb");   // write binary avoids newline issues on Windows
     if (!fp) {
@@ -830,9 +830,9 @@ void Save(void)
 {
     if (!CheckRecord()) return;
 
-    FILE *fp = fopen("Sample-CMS.txt", "w");
+    FILE *fp = fopen("P4_6-CMS.txt", "w");
     if (!fp) {
-        perror("Could not open Sample-CMS.txt for writing");
+        perror("Could not open P4_6-CMS.txt for writing");
         return;
     }
 
@@ -857,10 +857,10 @@ void Save(void)
     }
 
     if (fclose(fp) != 0) {
-        perror("Close failed for Sample-CMS.txt");
+        perror("Close failed for P4_6-CMS.txt");
         return;
     }
-    printf("All records successfully saved to Sample-CMS.txt\n");
+    printf("All records successfully saved to P4_6-CMS.txt\n");
 }
 
 
@@ -1197,5 +1197,6 @@ void Filtering(void)
             printf("Invalid choice. Please select 1 or 2.\n");
     }
 }
+
 
 
