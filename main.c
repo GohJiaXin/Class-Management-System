@@ -46,6 +46,7 @@ can work on merged SORT/FILTER function if have extra time but not important
     system should allow user to retry instead of returning to main menu immediately (solved by ZhiHao)
 10. In IsAlpha function, string without any alphabets but only spaces is considered valid, 
     fixed by adding a flag to check if there is at least one alphabet (solved by ZhiHao)
+11. For returnMainMenu function when user enters "n", it still returns invalid input when theres toupper funtion (solved by Zhi Hao)
 
 
 ***** OUTDATED ****
@@ -157,30 +158,33 @@ static int findIndexById(int id) {
 int ReturnMainMenu(void)
 {
     char choice;
+    int c;  // use a separate variable for clearing buffer
     printf("Return to main menu? (Y/N): ");
-    fflush(stdout);  // make sure the prompt prints immediately
+    fflush(stdout);
 
-    if (scanf(" %c", &choice) != 1) {   // notice the space before %c to skip newlines
+    if (scanf(" %c", &choice) != 1) {
         printf("Invalid input.\n");
-        while ((choice = getchar()) != '\n' && choice != EOF);
-        return 0;   // stay here if input fails
+        while ((c = getchar()) != '\n' && c != EOF);
+        return 0;
     }
 
-    while ((choice = getchar()) != '\n' && choice != EOF);  // clear once
+    // Clear leftover input properly
+    while ((c = getchar()) != '\n' && c != EOF);
 
-    // convert to uppercase so it works with 'y' or 'Y'
+    // Convert to uppercase so it works with both 'y' and 'Y'
     choice = toupper(choice);
 
     if (choice == 'Y') {
         return 1;   // go back to main menu
     } else if (choice == 'N') {
         printf("Goodbye!\n");
-        exit(0);    // end program
+        exit(0);
     } else {
         printf("Invalid choice. Returning to main menu by default.\n");
         return 1;
     }
 }
+
 
 int main(void)
 {
@@ -586,7 +590,7 @@ void Query(void)
         }
 
         if (found == -1) {
-            printf("CMS: The record with ID=%d does not exist. Please try again.\n", id);
+            printf("The record with ID=%d does not exist. Please try again.\n", id);
             continue; // loop back to ask again
         }
 
@@ -595,7 +599,7 @@ void Query(void)
     }
 
     //Display the results in pretty table format
-    printf("\nCMS: The record with ID= %d is found in the data table.\n", id);
+    printf("\nThe record with ID= %d is found in the data table.\n", id);
     printf("------------------------------------------------------------------");
     printf("\n%-10s %-20s %-27s %s\n", "ID", "Name", "Programme", "Mark");
     printf("------------------------------------------------------------------\n");
@@ -644,7 +648,7 @@ void UpdateRecord(void)
             }
         }
         if (found == -1) {
-            printf("CMS: The record with ID=%d does not exist. Please try again.\n", id);
+            printf("The record with ID=%d does not exist. Please try again.\n", id);
             continue;   // ask for ID again
         }
         break; // valid & existing
@@ -723,7 +727,7 @@ void UpdateRecord(void)
         break;
     }
 
-    printf("CMS: The record with ID=%d is successfully updated.\n", rec->ID);
+    printf("The record with ID=%d is successfully updated.\n", rec->ID);
 }
 void DeleteRecord(void)
 {
@@ -734,7 +738,7 @@ void DeleteRecord(void)
 
     /* ===== 1) Get valid ID ===== */
     while (1) {
-        printf("Delete ID (7 digits): ");
+        printf("DELETE ID (7 digits): ");
         fflush(stdout);
 
         if (!fgets(buf, sizeof(buf), stdin)) { 
@@ -754,14 +758,33 @@ void DeleteRecord(void)
 
         index = findIndexById(id);
         if (index < 0) {
-            printf("The record with ID=%d does not exist. Please try again.\n", id);
-            continue;
+            printf("The record with ID=%d does not exist.\n", id);
+            return;
         }
 
-        break; // valid & exists
+        break; // valid and exists
     }
 
-    /* ===== 2) Remove from in-memory array ===== */
+    /* ===== 2) Single confirmation ===== */
+    char confirm;
+    printf("Are you sure you want to delete record with ID=%d? Type \"Y\" to Confirm or type \"N\" to cancel.\n", id);
+    fflush(stdout);
+
+    if (scanf(" %c", &confirm) != 1) {
+        printf("Invalid input.\n");
+        while (getchar() != '\n');
+        return;
+    }
+
+    while (getchar() != '\n'); // clear input buffer
+    confirm = toupper(confirm);
+
+    if (confirm != 'Y') {
+        printf("The deletion is cancelled.\n");
+        return;
+    }
+
+    /* ===== 3) Remove from in-memory array ===== */
     if (index < recordCount - 1) {
         memmove(&student_records[index],
                 &student_records[index + 1],
@@ -769,60 +792,33 @@ void DeleteRecord(void)
     }
     recordCount--;
 
-    /* ===== 3) Safely update file ===== */
+    /* ===== 4) Safely update the file ===== */
     const char *final_path = "P4_6-CMS.txt";
     const char *tmp_path   = "P4_6-CMS.tmp";
 
-    FILE *fp = fopen(tmp_path, "wb");   // write binary avoids newline issues on Windows
+    FILE *fp = fopen(tmp_path, "wb");
     if (!fp) {
         perror("Could not open temporary file for writing");
         printf("In-memory record deleted, but file not updated. You may need to Save manually.\n");
         return;
     }
 
-    // write header
-    if (fprintf(fp, "ID\tName\tProgramme\tMark\n") < 0) {
-        perror("Write failed (header)");
-        fclose(fp);
-        remove(tmp_path);
-        return;
-    }
-
-    // write all remaining records
+    fprintf(fp, "ID\tName\tProgramme\tMark\n");
     for (int i = 0; i < recordCount; i++) {
-        if (fprintf(fp, "%d\t%s\t%s\t%.2f\n",
-                    student_records[i].ID,
-                    student_records[i].Name,
-                    student_records[i].Programme,
-                    student_records[i].Mark) < 0) {
-            perror("Write failed (row)");
-            fclose(fp);
-            remove(tmp_path);
-            return;
-        }
+        fprintf(fp, "%d\t%s\t%s\t%.2f\n",
+                student_records[i].ID,
+                student_records[i].Name,
+                student_records[i].Programme,
+                student_records[i].Mark);
     }
 
-    // close safely
-    if (fclose(fp) != 0) {
-        perror("Close failed for temporary file");
-        remove(tmp_path);
-        return;
-    }
+    fclose(fp);
+    remove(final_path);
+    rename(tmp_path, final_path);
 
-    // replace original file
-    if (remove(final_path) != 0) {
-        // it's fine if the file doesn’t exist — just warn
-        perror("Warning: could not remove old file");
-    }
-
-    if (rename(tmp_path, final_path) != 0) {
-        perror("Failed to replace the original file");
-        printf("File update not completed. Kept '%s' with the latest data.\n", tmp_path);
-        return;
-    }
-
-    printf("The record with ID=%d is successfully deleted. Remaining: %d\n", id, recordCount);
+    printf("The record with ID=%d is successfully deleted.\n", id);
 }
+
 
 
 
@@ -896,7 +892,7 @@ void AttendanceAndGrading(void)
         strcpy(student_records[i].Grade, grade);
     }
 
-    printf("\nCMS: Attendance and grading update complete.\n");
+    printf("\nAttendance and grading update complete.\n");
 }
 
 
@@ -1256,4 +1252,3 @@ void Filtering(void)
             printf("Invalid choice. Please select 1 or 2.\n");
     }
 }
-
