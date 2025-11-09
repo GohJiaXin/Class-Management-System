@@ -41,7 +41,7 @@ can work on merged SORT/FILTER function if have extra time but not important
 6. Filtering Function should not have name search as it is already covered by Query, and for programming, can consider to list the existing programmes in
     in the database then ask for input when user chooses to search by programme
 7. Sorting Function does not straight away return invalid when choosing an invalid Category choice (SOLVED by Jiaxin)
-8. Filter Function No error returned when user enters for eg. 30 40 for minimum mark then 50 for maximum mark
+8. Filter Function No error returned when user enters for eg. 30 40 for minimum mark then 50 for maximum mark (SOLVED by Jiaxin)
 9. When user using the Insert, Query, Delete and Update function, when user enter invalid value1 (eg. string instead of integer for ID),
     system should allow user to retry instead of returning to main menu immediately (solved)
 10. In IsAlpha function, string without any alphabets but only spaces is considered valid, 
@@ -1168,18 +1168,63 @@ void Filtering(void)
 
         case 2: {
             float minMark, maxMark;
-            printf("Enter minimum mark: ");
-            fflush(stdout);
-            if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%f", &minMark) != 1 || minMark < 0 || minMark > 100) {
-                printf("Invalid minimum mark.\n");
-                return;
+            char extraChar;
+            
+            // Get minimum mark with validation loop
+            while (1) {
+                printf("Enter minimum mark: ");
+                fflush(stdout);
+                
+                if (!fgets(buf, sizeof(buf), stdin)) {
+                    printf("Input error.\n");
+                    return;
+                }
+                
+                // Check if input contains exactly one float value
+                int scanResult = sscanf(buf, "%f %c", &minMark, &extraChar);
+                
+                if (scanResult != 1) {
+                    printf("Invalid input. Please enter a single number only.\n");
+                    continue;
+                }
+                
+                if (minMark < 0 || minMark > 100) {
+                    printf("Invalid minimum mark. Please enter a value between 0 and 100.\n");
+                    continue;
+                }
+                
+                break; // Valid minimum mark
             }
 
-            printf("Enter maximum mark: ");
-            fflush(stdout);
-            if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%f", &maxMark) != 1 || maxMark < 0 || maxMark > 100 || maxMark < minMark) {
-                printf("Invalid maximum mark.\n");
-                return;
+            // Get maximum mark with validation loop
+            while (1) {
+                printf("Enter maximum mark: ");
+                fflush(stdout);
+                
+                if (!fgets(buf, sizeof(buf), stdin)) {
+                    printf("Input error.\n");
+                    return;
+                }
+                
+                // Check if input contains exactly one float value
+                int scanResult = sscanf(buf, "%f %c", &maxMark, &extraChar);
+                
+                if (scanResult != 1) {
+                    printf("Invalid input. Please enter a single number only.\n");
+                    continue;
+                }
+                
+                if (maxMark < 0 || maxMark > 100) {
+                    printf("Invalid maximum mark. Please enter a value between 0 and 100.\n");
+                    continue;
+                }
+                
+                if (maxMark < minMark) {
+                    printf("Invalid range. Maximum mark (%.2f) cannot be less than minimum mark (%.2f).\n", maxMark, minMark);
+                    continue;
+                }
+                
+                break; // Valid maximum mark
             }
 
             printf("\nStudents with marks between %.2f and %.2f:\n", minMark, maxMark);
@@ -1207,12 +1252,7 @@ void Filtering(void)
             }
             break;
         }
-
         default:
             printf("Invalid choice. Please select 1 or 2.\n");
     }
 }
-
-
-
-
