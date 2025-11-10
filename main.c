@@ -100,7 +100,6 @@ typedef struct {
     char Name[100];
     char Programme[100];
     float Mark;
-    int Attendance;      // Added to match AttendanceAndGrading use
     char Grade[3];       // Added to hold grades like "A", "B", etc.
 } StudentRecords;
 
@@ -552,7 +551,6 @@ void InsertNewRecord(void)
     student_records[recordCount].Programme[sizeof(student_records[recordCount].Programme) - 1] = '\0';
 
     student_records[recordCount].Mark = mark;
-    student_records[recordCount].Attendance = 0;
     student_records[recordCount].Grade[0] = '\0';
 
     recordCount++;
@@ -880,40 +878,6 @@ void Save(void)
 
 
 /*Extra Features*/
-
-/* Attendance and grading */
-void AttendanceAndGrading(void)
-{
-    if (!CheckRecord()) return;CheckRecord();
-    printf("\n--- Attendance and Grading System ---\n");
-
-    for (int i = 0; i < recordCount; i++) {
-        printf("\nUpdating %s (%d)\n", student_records[i].Name, student_records[i].ID);
-        printf("Enter attendance percentage (0–100): ");
-        int att;
-        if (scanf("%d", &att) != 1 || att < 0 || att > 100) {
-            printf("Invalid input, skipping.\n");
-            while (getchar() != '\n');
-            continue;
-        }
-        student_records[i].Attendance = att;
-
-        float mark = student_records[i].Mark;
-        char grade[3];
-
-        if (mark >= 85 && att >= 75) strcpy(grade, "A");
-        else if (mark >= 70 && att >= 70) strcpy(grade, "B");
-        else if (mark >= 55 && att >= 60) strcpy(grade, "C");
-        else if (mark >= 40 && att >= 50) strcpy(grade, "D");
-        else strcpy(grade, "F");
-
-        strcpy(student_records[i].Grade, grade);
-    }
-
-    printf("\nAttendance and grading update complete.\n");
-}
-
-
 /* Summary Statistics*/
 void SummaryStats(void)
 {
@@ -1296,3 +1260,4 @@ void Filtering(void)
             printf("Invalid choice. Please select 1 or 2.\n");
     }
 }
+
