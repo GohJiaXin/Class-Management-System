@@ -1121,20 +1121,29 @@ void Filtering(void)
     int choice;
     char buf[256];
 
-    printf("\nPlease choose one category to filter by:\n");
-    printf("1. Filter by Programme\n");
-    printf("2. Filter by Marks\n");
-    printf("Enter your choice: ");
+    // Input validation loop for main choice
+    while (1) {
+        printf("\nPlease choose one category to filter by:\n");
+        printf("1. Filter by Programme\n");
+        printf("2. Filter by Marks\n");
+        printf("Enter your choice: ");
 
-    if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%d", &choice) != 1) {
-        printf("Invalid input.\n");
-        return;
+        if (!fgets(buf, sizeof(buf), stdin) || sscanf(buf, "%d", &choice) != 1) {
+            printf("Invalid input. Please enter 1 or 2.\n");
+            continue;
+        }
+
+        if (choice == 1 || choice == 2) {
+            break;  // Valid choice, exit loop
+        } else {
+            printf("Invalid choice. Please select 1 or 2.\n");
+        }
     }
 
     switch (choice) {
         case 1: {
-            // Collect unique programmes
-            char uniqueProgrammes[100][26]; // max 100 unique programmes, 25 chars + '\0'
+            // Collect unique programmes (increased to 50 chars)
+            char uniqueProgrammes[100][50]; // max 100 unique programmes, 50 chars
             int uniqueCount = 0;
             for (int i = 0; i < recordCount; i++) {
                 int found = 0;
@@ -1145,8 +1154,8 @@ void Filtering(void)
                     }
                 }
                 if (!found) {
-                    strncpy(uniqueProgrammes[uniqueCount], student_records[i].Programme, 25);
-                    uniqueProgrammes[uniqueCount][25] = '\0'; // safety null terminate
+                    strncpy(uniqueProgrammes[uniqueCount], student_records[i].Programme, 49);
+                    uniqueProgrammes[uniqueCount][49] = '\0'; // safety null terminate
                     uniqueCount++;
                 }
             }
@@ -1159,32 +1168,32 @@ void Filtering(void)
 
             // Prompt user to choose a programme by number
             char input[100];
-            int choice = 0;
+            int programmeChoice = 0;
             while (1) {
                 printf("\nEnter the number of the programme to filter by: ");
-                if (!fgets(input, sizeof(input), stdin) || sscanf(input, "%d", &choice) != 1) {
+                if (!fgets(input, sizeof(input), stdin) || sscanf(input, "%d", &programmeChoice) != 1) {
                     printf("Invalid input. Please enter a number.\n");
                     continue;
                 }
-                if (choice < 1 || choice > uniqueCount) {
+                if (programmeChoice < 1 || programmeChoice > uniqueCount) {
                     printf("Please enter a number between 1 and %d.\n", uniqueCount);
                     continue;
                 }
                 break;
             }
 
-            const char* chosenProgramme = uniqueProgrammes[choice - 1];
+            const char* chosenProgramme = uniqueProgrammes[programmeChoice - 1];
 
-            printf("Filtering records by programme: %s\n", chosenProgramme);
+            printf("\nFiltering records by programme: %s\n", chosenProgramme);
 
-            // Filter and display records matching chosen programme
-            printf("%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
-            printf("------------------------------------------------------------\n");
+            // Filter and display records matching chosen programme (increased width)
+            printf("%-10s %-20s %-35s %s\n", "ID", "Name", "Programme", "Mark");
+            printf("--------------------------------------------------------------------------------\n");
 
             int foundCount = 0;
             for (int i = 0; i < recordCount; i++) {
                 if (strcmp(student_records[i].Programme, chosenProgramme) == 0) {
-                    printf("%-10d %-20s %-20s %.2f\n",
+                    printf("%-10d %-20s %-35s %.2f\n",
                         student_records[i].ID,
                         student_records[i].Name,
                         student_records[i].Programme,
@@ -1259,14 +1268,14 @@ void Filtering(void)
             }
 
             printf("\nStudents with marks between %.2f and %.2f:\n", minMark, maxMark);
-            printf("%-10s %-20s %-20s %s\n", "ID", "Name", "Programme", "Mark");
-            printf("------------------------------------------------------------\n");
+            printf("%-10s %-20s %-35s %s\n", "ID", "Name", "Programme", "Mark");
+            printf("--------------------------------------------------------------------------------\n");
 
             int found = 0;
             for (int i = 0; i < recordCount; i++) {
                 float mark = student_records[i].Mark;
                 if (mark >= minMark && mark <= maxMark) {
-                    printf("%-10d %-20s %-20s %.2f\n",
+                    printf("%-10d %-20s %-35s %.2f\n",
                            student_records[i].ID,
                            student_records[i].Name,
                            student_records[i].Programme,
@@ -1278,7 +1287,7 @@ void Filtering(void)
             if (found == 0) {
                 printf("No students found in the specified range.\n");
             } else {
-                printf("------------------------------------------------------------\n");
+                printf("--------------------------------------------------------------------------------\n");
                 printf("Total matches: %d\n", found);
             }
             break;
