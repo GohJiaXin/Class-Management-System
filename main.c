@@ -394,36 +394,43 @@ int isAlphaOnly(const char *str) {
 
 void InsertNewRecord(void)
 {
+    // Check if there are records loaded, if not stop executing the function 
     if (!CheckRecord()) return;
 
     int id;
     char buf[256];
 
+    // Check if there's enough capacity to add a new record to the array
     if (!ensureCapacity(recordCount + 1)) {
         printf("Memory allocation error. Aborting insert.\n");
         return;
     }
 
-    /* ===== 1) GET VALID ID ===== */
+    // Keep asking until a valid, unique ID is provided
     while (1) {
         printf("Insert ID (7 digits): ");
+        // Forces the output message to appear immediately
         fflush(stdout);
 
+        // Prompt input error if fgets returns NULL
         if (!fgets(buf, sizeof(buf), stdin)) {
             printf("Input error.\n");
-            return;   // real I/O error – okay to bail
+            return;   
         }
 
+        // make sure input is an integer
         if (sscanf(buf, "%d", &id) != 1) {
             printf("Invalid ID. Please enter a valid integer.\n");
-            continue;  // ask again
+            continue;  
         }
-
+        
+        // make sure ID is exactly 7 digits
         if (id < 1000000 || id > 9999999) {
             printf("Invalid ID. It must be exactly 7 digits.\n");
             continue;  // ask again
         }
 
+        // check if the ID already exists
         if (idExists(id)) {
             printf("The record with ID=%d already exists. Please enter another ID.\n", id);
             continue;   
@@ -432,7 +439,7 @@ void InsertNewRecord(void)
         break; // valid ID
     }
 
-    /* ===== 2) GET VALID NAME ===== */
+    // Keep asking until a valid name is provided
     char name[100];
     while (1) {
         printf("Name: ");
@@ -442,6 +449,8 @@ void InsertNewRecord(void)
             printf("Input error.\n");
             return;
         }
+
+        // Get rid of "\n" at the end if any
         trim_newline(name);
 
         if (name[0] == '\0') {
@@ -463,7 +472,7 @@ void InsertNewRecord(void)
         break; // valid name
     }
 
-    /* ===== 3) GET VALID PROGRAMME ===== */
+    // Keep asking until a valid programme is provided
     char programme[100];
     while (1) {
         printf("Programme: ");
@@ -492,7 +501,7 @@ void InsertNewRecord(void)
         break; // valid programme
     }
 
-    /* ===== 4) GET VALID MARK ===== */
+    //Keep asking until a valid mark is provided
     float mark;
     while (1) {
         printf("Mark: ");
@@ -502,7 +511,8 @@ void InsertNewRecord(void)
             printf("Input error.\n");
             return;
         }
-
+        
+        // Make sure input is a float
         if (sscanf(buf, "%f", &mark) != 1) {
             printf("Invalid mark. Please enter a number.\n");
             continue;
@@ -516,13 +526,14 @@ void InsertNewRecord(void)
         break; // valid mark
     }
 
-    /* ===== 5) APPEND TO FILE ===== */
+    // append to file at newline
     FILE *fp = fopen("P4_6-CMS.txt", "a");
     if (!fp) {
         perror("Could not open P4_6-CMS.txt for appending");
         return;
     }
 
+    // Ensure the new record is appended on a new line
     if (fseek(fp, -1, SEEK_END) == 0) {
         int last = fgetc(fp);
         if (last != '\n') {
@@ -532,6 +543,7 @@ void InsertNewRecord(void)
         fseek(fp, 0, SEEK_END);
     }
 
+    // if there's write error(disk full or permission denied), return value -1 which print error message
     if (fprintf(fp, "%d\t%s\t%s\t%.2f\n", id, name, programme, mark) < 0) {
         perror("Write failed");
         fclose(fp);
@@ -539,7 +551,7 @@ void InsertNewRecord(void)
     }
     fclose(fp);
 
-    /* ===== 6) ADD TO MEMORY ===== */
+    // adds the new record to the in-memory array by copying the data
     student_records[recordCount].ID = id;
 
     strncpy(student_records[recordCount].Name, name,
@@ -558,7 +570,6 @@ void InsertNewRecord(void)
     printf("Record inserted: ID=%d, Name=\"%s\", Programme=\"%s\", Mark=%.2f\n",
            id, name, programme, mark);
 }
-
 
 void Query(void)
 {
@@ -1260,4 +1271,5 @@ void Filtering(void)
             printf("Invalid choice. Please select 1 or 2.\n");
     }
 }
+
 
