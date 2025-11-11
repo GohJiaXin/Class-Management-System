@@ -47,6 +47,7 @@ can work on merged SORT/FILTER function if have extra time but not important
 10. SOLVED by Zhi Hao -  In IsAlpha function, string without any alphabets but only spaces is considered valid, 
     fixed by adding a flag to check if there is at least one alphabet 
 11. SOLVED by Zhi Hao - For returnMainMenu function when user enters "n", it still returns invalid input when theres toupper funtion 
+12.SOLVED by Jia Xin - The updateRecord elements for the marks only accepts numerical, it will check if there is character, if have prompt an error.
 
 
 ***** OUTDATED ****
@@ -732,6 +733,7 @@ void UpdateRecord(void)
     /* ===== 4) Mark (-1 = keep) ===== */
     while (1) {
         float mark;
+        char *endptr;
         printf("Enter new mark (1.0~100.0, or -1 to keep current): ");
         fflush(stdout);
 
@@ -739,10 +741,29 @@ void UpdateRecord(void)
             printf("Input error.\n");
             return;
         }
-        if (sscanf(buf, "%f", &mark) != 1) {
+        
+        // Remove newline
+        buf[strcspn(buf, "\n")] = '\0';
+        
+        // Check if input is just whitespace/empty
+        char *trimmed = buf;
+        while (*trimmed == ' ' || *trimmed == '\t') trimmed++;
+        if (*trimmed == '\0') {
             printf("Invalid mark. Please enter a number.\n");
             continue;
         }
+        
+        // Use strtof for more precise validation
+        mark = strtof(trimmed, &endptr);
+        
+        // Check if conversion was successful and entire string was consumed
+        // endptr should point to end of string (only whitespace allowed after number)
+        while (*endptr == ' ' || *endptr == '\t') endptr++;
+        if (*endptr != '\0') {
+            printf("Invalid mark. Please enter a valid number.\n");
+            continue;
+        }
+        
         if (mark == -1.0f) {
             break;                     // keep current
         }
@@ -1271,6 +1292,7 @@ void Filtering(void)
             printf("Invalid choice. Please select 1 or 2.\n");
     }
 }
+
 
 
 
