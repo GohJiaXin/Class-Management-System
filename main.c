@@ -33,20 +33,20 @@ can work on merged SORT/FILTER function if have extra time but not important
 
 **** ERRORS/TROUBLESHOOT **** (Please note down if fixed thanks, DONT REMOVE as we can use it as test case)
 1. Anytime when user enters an input, system should allow the user to retry before returning to menu, possible to 
-    make it such that user can leave blank to return to menu( is this needed? need your opinions on this - jason )
-2. When inserting new record, currently inputting name does not validate if the user input ONLY has whitespace in the input for name and programme (Solved by ??)
-3. When inserting new record, inputing name and programme has no character limitations. need to set such that it wont go beyond the system formatting. (Solved By Jason)
-4. same thing as 3 but for Update Record  (Solved by Jason)
-5. Edit Sorting function such that it shows whether it is sorted numerically or alphabetically (SOLVED by Jason)
-6. Filtering Function should not have name search as it is already covered by Query, and for programming, can consider to list the existing programmes in
+    make it such that user can leave blank to return to menu ( is this needed? need your opinions on this - jason )
+2. SOLVED - When inserting new record, currently inputting name does not validate if the user input ONLY has whitespace in the input for name and programme (Solved by ??)
+3. SOLVED - When inserting new record, inputing name and programme has no character limitations. need to set such that it wont go beyond the system formatting. (Solved By Jason)
+4. SOLVED - same thing as 3 but for Update Record  (Solved by Jason)
+5. SOLVED - Edit Sorting function such that it shows whether it is sorted numerically or alphabetically (SOLVED by Jason)
+6. SOLVED - Filtering Function should not have name search as it is already covered by Query, and for programming, can consider to list the existing programmes in
     in the database then ask for input when user chooses to search by programme
-7. Sorting Function does not straight away return invalid when choosing an invalid Category choice (SOLVED by Jiaxin)
-8. Filter Function No error returned when user enters for eg. 30 40 for minimum mark then 50 for maximum mark (SOLVED by Jiaxin)
-9. When user using the Insert, Query, Delete and Update function, when user enter invalid value1 (eg. string instead of integer for ID),
+7. SOLVED - Sorting Function does not straight away return invalid when choosing an invalid Category choice (SOLVED by Jiaxin)
+8. SOLVED - Filter Function No error returned when user enters for eg. 30 40 for minimum mark then 50 for maximum mark (SOLVED by Jiaxin)
+9. SOLVED - When user using the Insert, Query, Delete and Update function, when user enter invalid value1 (eg. string instead of integer for ID),
     system should allow user to retry instead of returning to main menu immediately (solved by ZhiHao)
-10. In IsAlpha function, string without any alphabets but only spaces is considered valid, 
+10. SOLVED -  In IsAlpha function, string without any alphabets but only spaces is considered valid, 
     fixed by adding a flag to check if there is at least one alphabet (solved by ZhiHao)
-11. For returnMainMenu function when user enters "n", it still returns invalid input when theres toupper funtion (solved by Zhi Hao)
+11. SOLVED - For returnMainMenu function when user enters "n", it still returns invalid input when theres toupper funtion (solved by Zhi Hao)
 
 
 ***** OUTDATED ****
@@ -1271,5 +1271,6 @@ void Filtering(void)
             printf("Invalid choice. Please select 1 or 2.\n");
     }
 }
+
 
 
