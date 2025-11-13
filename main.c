@@ -574,7 +574,7 @@ void InsertNewRecord(void)
 
         // Ask if user wants to insert another record
         char insert_another;
-        printf("Do you want to insert another record? (Y/N): ");
+        printf("\nDo you want to insert another record? (Y/N): ");
         fflush(stdout);
 
         if (scanf(" %c", &insert_another) != 1) {
@@ -1345,6 +1345,7 @@ void Filtering(void)
             printf("Invalid choice. Please select 1 or 2.\n");
     }
 }
+
 
 
 
