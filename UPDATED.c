@@ -7,11 +7,6 @@
 #define MAX_PROGRAMME 100
 #define FILENAME "P4_6-CMS.txt"
 
-//Functions that need to be modified
-// 1. Insert function
-// 2. Query function
-// 3. Delete function
-
 // Student record structure with Grade field
 typedef struct {
     int ID;
@@ -32,9 +27,9 @@ void printDeclaration();
 void openDatabase();
 void showAll();
 void insertRecord();
-void queryRecord();
-void updateRecord();
-void deleteRecord();
+void queryRecord(char *input);
+void updateRecord(char *input);
+void deleteRecord(char *input);
 void saveDatabase();
 void showSummary();
 void sortByID(int ascending);
@@ -98,13 +93,13 @@ int main() {
             insertRecord();
         }
         else if (strncmp(command, "query", 5) == 0) {
-            queryRecord();
+            queryRecord(input);
         }
         else if (strncmp(command, "update", 6) == 0) {
-            updateRecord();
+            updateRecord(input);
         }
         else if (strncmp(command, "delete", 6) == 0) {
-            deleteRecord();
+            deleteRecord(input);
         }
         else if (strcmp(command, "save") == 0) {
             saveDatabase();
@@ -235,33 +230,73 @@ void insertRecord() {
         return;
     }
     
-    int id;
-    char name[MAX_NAME];
-    char programme[MAX_PROGRAMME];
-    float mark;
+    int id = -1;
+    char name[MAX_NAME] = "";
+    char programme[MAX_PROGRAMME] = "";
+    float mark = -1;
     
-    printf("CMS: Enter Student ID: ");
-    scanf("%d", &id);
-    getchar();
+    char input[500];
+    printf("CMS: ");
+    fgets(input, sizeof(input), stdin);
+    input[strcspn(input, "\n")] = 0;
+    
+    // Parse the input: INSERT ID=2401234 Name=Michelle Lee Programme=Information Security Mark=73.2
+    char *token = strtok(input, " ");
+    
+    while (token != NULL) {
+        if (strncmp(token, "ID=", 3) == 0) {
+            id = atoi(token + 3);
+        }
+        else if (strncmp(token, "Mark=", 5) == 0) {
+            mark = atof(token + 5);
+        }
+        else if (strncmp(token, "Name=", 5) == 0) {
+            char *nameStart = token + 5;
+            strcpy(name, nameStart);
+            // Continue reading until we hit Programme= or Mark=
+            token = strtok(NULL, " ");
+            while (token != NULL && strncmp(token, "Programme=", 10) != 0 && strncmp(token, "Mark=", 5) != 0) {
+                strcat(name, " ");
+                strcat(name, token);
+                token = strtok(NULL, " ");
+            }
+            continue;
+        }
+        else if (strncmp(token, "Programme=", 10) == 0) {
+            char *progStart = token + 10;
+            strcpy(programme, progStart);
+            // Continue reading until we hit Mark=
+            token = strtok(NULL, " ");
+            while (token != NULL && strncmp(token, "Mark=", 5) != 0) {
+                strcat(programme, " ");
+                strcat(programme, token);
+                token = strtok(NULL, " ");
+            }
+            continue;
+        }
+        token = strtok(NULL, " ");
+    }
+    
+    // Check if only ID is provided (to check existence)
+    if (id != -1 && strlen(name) == 0) {
+        if (idExists(id)) {
+            printf("CMS: The record with ID=%d already exists.\n", id);
+        } else {
+            printf("CMS: Please provide all fields: ID, Name, Programme, and Mark.\n");
+        }
+        return;
+    }
+    
+    // Validate all fields are provided
+    if (id == -1 || strlen(name) == 0 || strlen(programme) == 0 || mark == -1) {
+        printf("CMS: Invalid input. Please provide all fields: ID, Name, Programme, and Mark.\n");
+        return;
+    }
     
     if (idExists(id)) {
         printf("CMS: The record with ID=%d already exists.\n", id);
         return;
     }
-    
-    printf("CMS: Enter Name: ");
-    fgets(name, sizeof(name), stdin);
-    trim_newline(name);
-    trim(name);
-    
-    printf("CMS: Enter Programme: ");
-    fgets(programme, sizeof(programme), stdin);
-    trim_newline(programme);
-    trim(programme);
-    
-    printf("CMS: Enter Mark: ");
-    scanf("%f", &mark);
-    getchar();
     
     if (mark < 0 || mark > 100) {
         printf("CMS: Invalid mark. Mark should be between 0 and 100.\n");
@@ -283,16 +318,28 @@ void insertRecord() {
     printf("CMS: A new record with ID=%d is successfully inserted.\n", id);
 }
 
-void queryRecord() {
+void queryRecord(char *input) {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
         return;
     }
     
-    int id;
-    printf("CMS: Enter Student ID to query: ");
-    scanf("%d", &id);
-    getchar();
+    int id = -1;
+    
+    // Parse: QUERY ID=2401234
+    char *token = strtok(input, " ");
+    while (token != NULL) {
+        if (strncmp(token, "ID=", 3) == 0) {
+            id = atoi(token + 3);
+            break;
+        }
+        token = strtok(NULL, " ");
+    }
+    
+    if (id == -1) {
+        printf("CMS: Invalid input. Please provide ID in format: QUERY ID=xxxxx\n");
+        return;
+    }
     
     int index = findIndexById(id);
     if (index == -1) {
@@ -301,26 +348,69 @@ void queryRecord() {
     }
     
     printf("CMS: The record with ID=%d is found in the data table.\n", id);
-    printf("%-10s %-25s %-30s %-10s %-6s\n", "ID", "Name", "Programme", "Mark", "Grade");
-    printf("----------------------------------------------------------------------------------------\n");
-    printf("%-10d %-25s %-30s %-10.1f %-6s\n",
+    printf("%-10s %-25s %-30s %-10s\n", "ID", "Name", "Programme", "Mark");
+    printf("--------------------------------------------------------------------------------\n");
+    printf("%-10d %-25s %-30s %-10.1f\n",
            student_records[index].ID,
            student_records[index].Name,
            student_records[index].Programme,
-           student_records[index].Mark,
-           student_records[index].Grade);
+           student_records[index].Mark);
 }
 
-void updateRecord() {
+void updateRecord(char *input) {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
         return;
     }
     
-    int id;
-    printf("CMS: Enter Student ID to update: ");
-    scanf("%d", &id);
-    getchar();
+    int id = -1;
+    char name[MAX_NAME] = "";
+    char programme[MAX_PROGRAMME] = "";
+    float mark = -1;
+    int hasName = 0, hasProgramme = 0, hasMark = 0;
+    
+    // Parse: UPDATE ID=2401234 Mark=69.8 or UPDATE ID=2401234 Programme=Applied AI
+    char *token = strtok(input, " ");
+    
+    while (token != NULL) {
+        if (strncmp(token, "ID=", 3) == 0) {
+            id = atoi(token + 3);
+        }
+        else if (strncmp(token, "Mark=", 5) == 0) {
+            mark = atof(token + 5);
+            hasMark = 1;
+        }
+        else if (strncmp(token, "Name=", 5) == 0) {
+            hasName = 1;
+            char *nameStart = token + 5;
+            strcpy(name, nameStart);
+            token = strtok(NULL, " ");
+            while (token != NULL && strncmp(token, "Programme=", 10) != 0 && strncmp(token, "Mark=", 5) != 0) {
+                strcat(name, " ");
+                strcat(name, token);
+                token = strtok(NULL, " ");
+            }
+            continue;
+        }
+        else if (strncmp(token, "Programme=", 10) == 0) {
+            hasProgramme = 1;
+            char *progStart = token + 10;
+            strcpy(programme, progStart);
+            token = strtok(NULL, " ");
+            while (token != NULL && strncmp(token, "Mark=", 5) != 0) {
+                strcat(programme, " ");
+                strcat(programme, token);
+                token = strtok(NULL, " ");
+            }
+            continue;
+        }
+        token = strtok(NULL, " ");
+    }
+    
+    if (id == -1) {
+        printf("CMS: Invalid input. Please provide ID in format: UPDATE ID=xxxxx [Name=...] [Programme=...] [Mark=...]\n");
+        return;
+    }
     
     int index = findIndexById(id);
     if (index == -1) {
@@ -328,51 +418,48 @@ void updateRecord() {
         return;
     }
     
-    char choice[10];
-    printf("CMS: What would you like to update? (Name/Programme/Mark/All): ");
-    fgets(choice, sizeof(choice), stdin);
-    trim_newline(choice);
-    toLowerCase(choice);
-    
-    if (strcmp(choice, "name") == 0 || strcmp(choice, "all") == 0) {
-        printf("CMS: Enter new Name: ");
-        fgets(student_records[index].Name, MAX_NAME, stdin);
-        trim_newline(student_records[index].Name);
-        trim(student_records[index].Name);
+    if (hasName) {
+        strcpy(student_records[index].Name, name);
     }
     
-    if (strcmp(choice, "programme") == 0 || strcmp(choice, "all") == 0) {
-        printf("CMS: Enter new Programme: ");
-        fgets(student_records[index].Programme, MAX_PROGRAMME, stdin);
-        trim_newline(student_records[index].Programme);
-        trim(student_records[index].Programme);
+    if (hasProgramme) {
+        strcpy(student_records[index].Programme, programme);
     }
     
-    if (strcmp(choice, "mark") == 0 || strcmp(choice, "all") == 0) {
-        printf("CMS: Enter new Mark: ");
-        scanf("%f", &student_records[index].Mark);
-        getchar();
-        
-        if (student_records[index].Mark < 0 || student_records[index].Mark > 100) {
+    if (hasMark) {
+        if (mark < 0 || mark > 100) {
             printf("CMS: Invalid mark. Update cancelled.\n");
             return;
         }
-        calculateGrade(student_records[index].Mark, student_records[index].Grade);
+        student_records[index].Mark = mark;
+        calculateGrade(mark, student_records[index].Grade);
     }
     
     printf("CMS: The record with ID=%d is successfully updated.\n", id);
 }
 
-void deleteRecord() {
+void deleteRecord(char *input) {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
         return;
     }
     
-    int id;
-    printf("CMS: Enter Student ID to delete: ");
-    scanf("%d", &id);
-    getchar();
+    int id = -1;
+    
+    // Parse: DELETE ID=2401234
+    char *token = strtok(input, " ");
+    while (token != NULL) {
+        if (strncmp(token, "ID=", 3) == 0) {
+            id = atoi(token + 3);
+            break;
+        }
+        token = strtok(NULL, " ");
+    }
+    
+    if (id == -1) {
+        printf("CMS: Invalid input. Please provide ID in format: DELETE ID=xxxxx\n");
+        return;
+    }
     
     int index = findIndexById(id);
     if (index == -1) {
