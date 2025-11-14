@@ -3,22 +3,28 @@
 #include <string.h>
 #include <ctype.h>
 
-#define MAX_RECORDS 100
-#define MAX_NAME 50
-#define MAX_PROGRAMME 50
-#define FILENAME "P1_1-CMS.txt"
+#define MAX_NAME 100
+#define MAX_PROGRAMME 100
+#define FILENAME "P4_6-CMS.txt"
 
-// Student record structure
+//Functions that need to be modified
+// 1. Insert function
+// 2. Query function
+// 3. Delete function
+
+// Student record structure with Grade field
 typedef struct {
-    int id;
-    char name[MAX_NAME];
-    char programme[MAX_PROGRAMME];
-    float mark;
-} Student;
+    int ID;
+    char Name[MAX_NAME];
+    char Programme[MAX_PROGRAMME];
+    float Mark;
+    char Grade[3];
+} StudentRecords;
 
-// Global variables
-Student records[MAX_RECORDS];
+// Global variables - using dynamic array
+StudentRecords *student_records = NULL;
 int recordCount = 0;
+int capacity = 0;
 int isFileOpen = 0;
 
 // Function prototypes
@@ -33,13 +39,19 @@ void saveDatabase();
 void showSummary();
 void sortByID(int ascending);
 void sortByMark(int ascending);
-int findRecordByID(int id);
 void trim(char *str);
 void toLowerCase(char *str);
+void calculateGrade(float mark, char *grade);
+
+// Helper functions
+static void trim_newline(char *s);
+static int idExists(int id);
+static int ensureCapacity(int want);
+static int findIndexById(int id);
 
 int main() {
     char input[200];
-    char command[50];
+    char command[200];
     
     printDeclaration();
     
@@ -48,16 +60,16 @@ int main() {
     printf("Enhancement commands: SHOW ALL SORT BY ID ASC/DESC, SHOW ALL SORT BY MARK ASC/DESC\n\n");
     
     while (1) {
-        printf("P1_1: ");
+        printf("P4_6: ");
         fgets(input, sizeof(input), stdin);
-        input[strcspn(input, "\n")] = 0; // Remove newline
+        input[strcspn(input, "\n")] = 0;
         
-        // Copy for processing
         strcpy(command, input);
         toLowerCase(command);
         
         if (strcmp(command, "exit") == 0) {
             printf("CMS: Exiting program. Goodbye!\n");
+            free(student_records);
             break;
         }
         else if (strcmp(command, "open") == 0) {
@@ -126,13 +138,13 @@ void printDeclaration() {
     printf("• We agree that we will not disclose any information or material of the group project\n");
     printf("  to others or upload to any other places for public access.\n");
     printf("• We agree that we did not copy any code directly from AI generated sources.\n\n");
-    printf("Declared by: Group P1_1\n");
+    printf("Declared by: Group P4_6\n");
     printf("Team members:\n");
-    printf("1. Member Name 1\n");
-    printf("2. Member Name 2\n");
-    printf("3. Member Name 3\n");
-    printf("4. Member Name 4\n");
-    printf("5. Member Name 5\n");
+    printf("1. Goh Jia Xin\n");
+    printf("2. Chourasia Anushka\n");
+    printf("3. Chye Zhi Hao\n");
+    printf("4. Goh Jason Fadil\n");
+    printf("5. Goh Li Xuan\n");
     printf("Date: November 25, 2025\n");
     printf("========================================\n\n");
 }
@@ -147,16 +159,44 @@ void openDatabase() {
     }
     
     recordCount = 0;
-    while (fscanf(file, "%d %49[^\t\n] %49[^\t\n] %f\n", 
-                  &records[recordCount].id,
-                  records[recordCount].name,
-                  records[recordCount].programme,
-                  &records[recordCount].mark) == 4) {
-        recordCount++;
-        if (recordCount >= MAX_RECORDS) {
-            printf("CMS: Warning - Maximum record limit reached.\n");
-            break;
+    char line[300];
+    
+    while (fgets(line, sizeof(line), file)) {
+        if (!ensureCapacity(recordCount + 1)) {
+            printf("CMS: Error - Unable to allocate memory.\n");
+            fclose(file);
+            return;
         }
+        
+        int id;
+        char name[MAX_NAME];
+        char programme[MAX_PROGRAMME];
+        float mark;
+        char grade[3];
+        
+        // Try reading with grade first
+        int items = sscanf(line, "%d\t%99[^\t]\t%99[^\t]\t%f\t%2s",
+                          &id, name, programme, &mark, grade);
+        
+        if (items == 5) {
+            // Has grade field
+            student_records[recordCount].ID = id;
+            strcpy(student_records[recordCount].Name, name);
+            strcpy(student_records[recordCount].Programme, programme);
+            student_records[recordCount].Mark = mark;
+            strcpy(student_records[recordCount].Grade, grade);
+        } else if (items == 4) {
+            // No grade field, calculate it
+            student_records[recordCount].ID = id;
+            strcpy(student_records[recordCount].Name, name);
+            strcpy(student_records[recordCount].Programme, programme);
+            student_records[recordCount].Mark = mark;
+            calculateGrade(mark, student_records[recordCount].Grade);
+        } else {
+            continue; // Skip invalid lines
+        }
+        
+        recordCount++;
     }
     
     fclose(file);
@@ -176,15 +216,16 @@ void showAll() {
     }
     
     printf("CMS: Here are all the records found in the table \"StudentRecords\".\n");
-    printf("%-10s %-25s %-30s %-10s\n", "ID", "Name", "Programme", "Mark");
-    printf("--------------------------------------------------------------------------------\n");
+    printf("%-10s %-25s %-30s %-10s %-6s\n", "ID", "Name", "Programme", "Mark", "Grade");
+    printf("----------------------------------------------------------------------------------------\n");
     
     for (int i = 0; i < recordCount; i++) {
-        printf("%-10d %-25s %-30s %-10.1f\n",
-               records[i].id,
-               records[i].name,
-               records[i].programme,
-               records[i].mark);
+        printf("%-10d %-25s %-30s %-10.1f %-6s\n",
+               student_records[i].ID,
+               student_records[i].Name,
+               student_records[i].Programme,
+               student_records[i].Mark,
+               student_records[i].Grade);
     }
 }
 
@@ -201,39 +242,42 @@ void insertRecord() {
     
     printf("CMS: Enter Student ID: ");
     scanf("%d", &id);
-    getchar(); // Clear newline
+    getchar();
     
-    // Check if ID already exists
-    if (findRecordByID(id) != -1) {
+    if (idExists(id)) {
         printf("CMS: The record with ID=%d already exists.\n", id);
         return;
     }
     
     printf("CMS: Enter Name: ");
     fgets(name, sizeof(name), stdin);
-    name[strcspn(name, "\n")] = 0;
+    trim_newline(name);
     trim(name);
     
     printf("CMS: Enter Programme: ");
     fgets(programme, sizeof(programme), stdin);
-    programme[strcspn(programme, "\n")] = 0;
+    trim_newline(programme);
     trim(programme);
     
     printf("CMS: Enter Mark: ");
     scanf("%f", &mark);
-    getchar(); // Clear newline
+    getchar();
     
-    // Validate mark
     if (mark < 0 || mark > 100) {
         printf("CMS: Invalid mark. Mark should be between 0 and 100.\n");
         return;
     }
     
-    // Add new record
-    records[recordCount].id = id;
-    strcpy(records[recordCount].name, name);
-    strcpy(records[recordCount].programme, programme);
-    records[recordCount].mark = mark;
+    if (!ensureCapacity(recordCount + 1)) {
+        printf("CMS: Error - Unable to allocate memory for new record.\n");
+        return;
+    }
+    
+    student_records[recordCount].ID = id;
+    strcpy(student_records[recordCount].Name, name);
+    strcpy(student_records[recordCount].Programme, programme);
+    student_records[recordCount].Mark = mark;
+    calculateGrade(mark, student_records[recordCount].Grade);
     recordCount++;
     
     printf("CMS: A new record with ID=%d is successfully inserted.\n", id);
@@ -248,22 +292,23 @@ void queryRecord() {
     int id;
     printf("CMS: Enter Student ID to query: ");
     scanf("%d", &id);
-    getchar(); // Clear newline
+    getchar();
     
-    int index = findRecordByID(id);
+    int index = findIndexById(id);
     if (index == -1) {
         printf("CMS: The record with ID=%d does not exist.\n", id);
         return;
     }
     
     printf("CMS: The record with ID=%d is found in the data table.\n", id);
-    printf("%-10s %-25s %-30s %-10s\n", "ID", "Name", "Programme", "Mark");
-    printf("--------------------------------------------------------------------------------\n");
-    printf("%-10d %-25s %-30s %-10.1f\n",
-           records[index].id,
-           records[index].name,
-           records[index].programme,
-           records[index].mark);
+    printf("%-10s %-25s %-30s %-10s %-6s\n", "ID", "Name", "Programme", "Mark", "Grade");
+    printf("----------------------------------------------------------------------------------------\n");
+    printf("%-10d %-25s %-30s %-10.1f %-6s\n",
+           student_records[index].ID,
+           student_records[index].Name,
+           student_records[index].Programme,
+           student_records[index].Mark,
+           student_records[index].Grade);
 }
 
 void updateRecord() {
@@ -275,9 +320,9 @@ void updateRecord() {
     int id;
     printf("CMS: Enter Student ID to update: ");
     scanf("%d", &id);
-    getchar(); // Clear newline
+    getchar();
     
-    int index = findRecordByID(id);
+    int index = findIndexById(id);
     if (index == -1) {
         printf("CMS: The record with ID=%d does not exist.\n", id);
         return;
@@ -286,32 +331,33 @@ void updateRecord() {
     char choice[10];
     printf("CMS: What would you like to update? (Name/Programme/Mark/All): ");
     fgets(choice, sizeof(choice), stdin);
-    choice[strcspn(choice, "\n")] = 0;
+    trim_newline(choice);
     toLowerCase(choice);
     
     if (strcmp(choice, "name") == 0 || strcmp(choice, "all") == 0) {
         printf("CMS: Enter new Name: ");
-        fgets(records[index].name, sizeof(records[index].name), stdin);
-        records[index].name[strcspn(records[index].name, "\n")] = 0;
-        trim(records[index].name);
+        fgets(student_records[index].Name, MAX_NAME, stdin);
+        trim_newline(student_records[index].Name);
+        trim(student_records[index].Name);
     }
     
     if (strcmp(choice, "programme") == 0 || strcmp(choice, "all") == 0) {
         printf("CMS: Enter new Programme: ");
-        fgets(records[index].programme, sizeof(records[index].programme), stdin);
-        records[index].programme[strcspn(records[index].programme, "\n")] = 0;
-        trim(records[index].programme);
+        fgets(student_records[index].Programme, MAX_PROGRAMME, stdin);
+        trim_newline(student_records[index].Programme);
+        trim(student_records[index].Programme);
     }
     
     if (strcmp(choice, "mark") == 0 || strcmp(choice, "all") == 0) {
         printf("CMS: Enter new Mark: ");
-        scanf("%f", &records[index].mark);
-        getchar(); // Clear newline
+        scanf("%f", &student_records[index].Mark);
+        getchar();
         
-        if (records[index].mark < 0 || records[index].mark > 100) {
+        if (student_records[index].Mark < 0 || student_records[index].Mark > 100) {
             printf("CMS: Invalid mark. Update cancelled.\n");
             return;
         }
+        calculateGrade(student_records[index].Mark, student_records[index].Grade);
     }
     
     printf("CMS: The record with ID=%d is successfully updated.\n", id);
@@ -326,9 +372,9 @@ void deleteRecord() {
     int id;
     printf("CMS: Enter Student ID to delete: ");
     scanf("%d", &id);
-    getchar(); // Clear newline
+    getchar();
     
-    int index = findRecordByID(id);
+    int index = findIndexById(id);
     if (index == -1) {
         printf("CMS: The record with ID=%d does not exist.\n", id);
         return;
@@ -336,14 +382,13 @@ void deleteRecord() {
     
     char confirm;
     printf("CMS: Are you sure you want to delete record with ID=%d? Type \"Y\" to Confirm or type \"N\" to cancel.\n", id);
-    printf("P1_1: ");
+    printf("P4_6: ");
     scanf("%c", &confirm);
-    getchar(); // Clear newline
+    getchar();
     
     if (confirm == 'Y' || confirm == 'y') {
-        // Shift all records after the deleted one
         for (int i = index; i < recordCount - 1; i++) {
-            records[i] = records[i + 1];
+            student_records[i] = student_records[i + 1];
         }
         recordCount--;
         printf("CMS: The record with ID=%d is successfully deleted.\n", id);
@@ -365,11 +410,12 @@ void saveDatabase() {
     }
     
     for (int i = 0; i < recordCount; i++) {
-        fprintf(file, "%d\t%s\t%s\t%.1f\n",
-                records[i].id,
-                records[i].name,
-                records[i].programme,
-                records[i].mark);
+        fprintf(file, "%d\t%s\t%s\t%.1f\t%s\n",
+                student_records[i].ID,
+                student_records[i].Name,
+                student_records[i].Programme,
+                student_records[i].Mark,
+                student_records[i].Grade);
     }
     
     fclose(file);
@@ -387,17 +433,17 @@ void showSummary() {
         return;
     }
     
-    float sum = 0, highest = records[0].mark, lowest = records[0].mark;
+    float sum = 0, highest = student_records[0].Mark, lowest = student_records[0].Mark;
     int highIndex = 0, lowIndex = 0;
     
     for (int i = 0; i < recordCount; i++) {
-        sum += records[i].mark;
-        if (records[i].mark > highest) {
-            highest = records[i].mark;
+        sum += student_records[i].Mark;
+        if (student_records[i].Mark > highest) {
+            highest = student_records[i].Mark;
             highIndex = i;
         }
-        if (records[i].mark < lowest) {
-            lowest = records[i].mark;
+        if (student_records[i].Mark < lowest) {
+            lowest = student_records[i].Mark;
             lowIndex = i;
         }
     }
@@ -407,8 +453,10 @@ void showSummary() {
     printf("\n=== Summary Statistics ===\n");
     printf("Total number of students: %d\n", recordCount);
     printf("Average mark: %.2f\n", average);
-    printf("Highest mark: %.1f (Student: %s)\n", highest, records[highIndex].name);
-    printf("Lowest mark: %.1f (Student: %s)\n", lowest, records[lowIndex].name);
+    printf("Highest mark: %.1f (Student: %s, Grade: %s)\n", 
+           highest, student_records[highIndex].Name, student_records[highIndex].Grade);
+    printf("Lowest mark: %.1f (Student: %s, Grade: %s)\n", 
+           lowest, student_records[lowIndex].Name, student_records[lowIndex].Grade);
     printf("==========================\n\n");
 }
 
@@ -418,13 +466,13 @@ void sortByID(int ascending) {
     for (int i = 0; i < recordCount - 1; i++) {
         for (int j = 0; j < recordCount - i - 1; j++) {
             int swap = ascending ? 
-                (records[j].id > records[j + 1].id) : 
-                (records[j].id < records[j + 1].id);
+                (student_records[j].ID > student_records[j + 1].ID) : 
+                (student_records[j].ID < student_records[j + 1].ID);
             
             if (swap) {
-                Student temp = records[j];
-                records[j] = records[j + 1];
-                records[j + 1] = temp;
+                StudentRecords temp = student_records[j];
+                student_records[j] = student_records[j + 1];
+                student_records[j + 1] = temp;
             }
         }
     }
@@ -438,13 +486,13 @@ void sortByMark(int ascending) {
     for (int i = 0; i < recordCount - 1; i++) {
         for (int j = 0; j < recordCount - i - 1; j++) {
             int swap = ascending ? 
-                (records[j].mark > records[j + 1].mark) : 
-                (records[j].mark < records[j + 1].mark);
+                (student_records[j].Mark > student_records[j + 1].Mark) : 
+                (student_records[j].Mark < student_records[j + 1].Mark);
             
             if (swap) {
-                Student temp = records[j];
-                records[j] = records[j + 1];
-                records[j + 1] = temp;
+                StudentRecords temp = student_records[j];
+                student_records[j] = student_records[j + 1];
+                student_records[j + 1] = temp;
             }
         }
     }
@@ -452,36 +500,30 @@ void sortByMark(int ascending) {
     printf("CMS: Records sorted by Mark (%s).\n", ascending ? "ascending" : "descending");
 }
 
-int findRecordByID(int id) {
-    for (int i = 0; i < recordCount; i++) {
-        if (records[i].id == id) {
-            return i;
-        }
-    }
-    return -1;
+void calculateGrade(float mark, char *grade) {
+    if (mark >= 85) strcpy(grade, "A");
+    else if (mark >= 70) strcpy(grade, "B");
+    else if (mark >= 60) strcpy(grade, "C");
+    else if (mark >= 50) strcpy(grade, "D");
+    else strcpy(grade, "F");
 }
 
 void trim(char *str) {
     char *start = str;
     char *end;
     
-    // Trim leading spaces
     while (isspace((unsigned char)*start)) start++;
     
-    // All spaces?
     if (*start == 0) {
         *str = 0;
         return;
     }
     
-    // Trim trailing spaces
     end = start + strlen(start) - 1;
     while (end > start && isspace((unsigned char)*end)) end--;
     
-    // Write new null terminator
     *(end + 1) = 0;
     
-    // Move trimmed string to start
     memmove(str, start, end - start + 2);
 }
 
@@ -489,4 +531,41 @@ void toLowerCase(char *str) {
     for (int i = 0; str[i]; i++) {
         str[i] = tolower(str[i]);
     }
+}
+
+// Helper function implementations
+static void trim_newline(char *s) {
+    if (!s) return;
+    size_t n = strlen(s);
+    if (n && (s[n-1] == '\n' || s[n-1] == '\r')) s[n-1] = '\0';
+}
+
+static int idExists(int id) {
+    for (int i = 0; i < recordCount; i++) {
+        if (student_records[i].ID == id) return 1;
+    }
+    return 0;
+}
+
+static int ensureCapacity(int want) {
+    if (capacity >= want) return 1;
+    
+    int newCap = (capacity > 0) ? capacity : 16;
+    while (newCap < want) newCap *= 2;
+    
+    StudentRecords *tmp = realloc(student_records, newCap * sizeof(*tmp));
+    if (!tmp) {
+        perror("realloc failed");
+        return 0;
+    }
+    student_records = tmp;
+    capacity = newCap;
+    return 1;
+}
+
+static int findIndexById(int id) {
+    for (int i = 0; i < recordCount; i++) {
+        if (student_records[i].ID == id) return i;
+    }
+    return -1;
 }
