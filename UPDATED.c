@@ -357,84 +357,98 @@ void queryRecord(char *input) {
            student_records[index].Mark);
 }
 
-void updateRecord(char *input) {
+void updateRecord() {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
         return;
     }
-    
-    int id = -1;
-    char name[MAX_NAME] = "";
-    char programme[MAX_PROGRAMME] = "";
-    float mark = -1;
-    int hasName = 0, hasProgramme = 0, hasMark = 0;
-    
-    // Parse: UPDATE ID=2401234 Mark=69.8 or UPDATE ID=2401234 Programme=Applied AI
-    char *token = strtok(input, " ");
-    
-    while (token != NULL) {
-        if (strncmp(token, "ID=", 3) == 0) {
-            id = atoi(token + 3);
-        }
-        else if (strncmp(token, "Mark=", 5) == 0) {
-            mark = atof(token + 5);
-            hasMark = 1;
-        }
-        else if (strncmp(token, "Name=", 5) == 0) {
-            hasName = 1;
-            char *nameStart = token + 5;
-            strcpy(name, nameStart);
-            token = strtok(NULL, " ");
-            while (token != NULL && strncmp(token, "Programme=", 10) != 0 && strncmp(token, "Mark=", 5) != 0) {
-                strcat(name, " ");
-                strcat(name, token);
-                token = strtok(NULL, " ");
-            }
-            continue;
-        }
-        else if (strncmp(token, "Programme=", 10) == 0) {
-            hasProgramme = 1;
-            char *progStart = token + 10;
-            strcpy(programme, progStart);
-            token = strtok(NULL, " ");
-            while (token != NULL && strncmp(token, "Mark=", 5) != 0) {
-                strcat(programme, " ");
-                strcat(programme, token);
-                token = strtok(NULL, " ");
-            }
-            continue;
-        }
-        token = strtok(NULL, " ");
-    }
-    
-    if (id == -1) {
-        printf("CMS: Invalid input. Please provide ID in format: UPDATE ID=xxxxx [Name=...] [Programme=...] [Mark=...]\n");
+    // Clear any leftover input (especially from scanf)
+    int ch;
+    while ((ch = getchar()) != '\n' && ch != EOF);
+    char input[256];
+    printf("P4_6: ");
+    fflush(stdout);
+
+    /* Read entire command line, e.g.
+       P4_6: UPDATE ID=2401234 Programme=Applied AI
+    */
+    if (!fgets(input, sizeof(input), stdin)) {
+        printf("CMS: Input error.\n");
         return;
     }
-    
-    int index = findIndexById(id);
+
+    /* Ensure newline trimmed */
+    input[strcspn(input, "\n")] = '\0';
+
+    /* Extract ID and field */
+    int id;
+    char field[50], value[100];
+
+    /* Parse format: UPDATE ID=xxxxxxx Field=value */
+    int parsed = sscanf(input, "UPDATE ID=%d %49[^=]=%99[^\n]", &id, field, value);
+
+    if (parsed != 3) {
+        printf("CMS: Invalid UPDATE format.\n");
+        return;
+    }
+
+    /* Convert field name into comparable lowercase string */
+    for (int i = 0; field[i]; i++)
+        field[i] = tolower(field[i]);
+
+    /* ---- FIND RECORD ---- */
+    int index = -1;
+    for (int i = 0; i < recordCount; i++) {
+        if (student_records[i].ID == id) {
+            index = i;
+            break;
+        }
+    }
+
     if (index == -1) {
         printf("CMS: The record with ID=%d does not exist.\n", id);
         return;
     }
-    
-    if (hasName) {
-        strcpy(student_records[index].Name, name);
+
+    StudentRecords *rec = &student_records[index];
+
+    /* ---- APPLY THE UPDATE ---- */
+    if (strcmp(field, "name") == 0) {
+        strncpy(rec->Name, value, sizeof(rec->Name) - 1);
+        rec->Name[sizeof(rec->Name) - 1] = '\0';
     }
-    
-    if (hasProgramme) {
-        strcpy(student_records[index].Programme, programme);
+    else if (strcmp(field, "programme") == 0) {
+        strncpy(rec->Programme, value, sizeof(rec->Programme) - 1);
+        rec->Programme[sizeof(rec->Programme) - 1] = '\0';
     }
-    
-    if (hasMark) {
-        if (mark < 0 || mark > 100) {
-            printf("CMS: Invalid mark. Update cancelled.\n");
-            return;
-        }
-        student_records[index].Mark = mark;
-        calculateGrade(mark, student_records[index].Grade);
+    else if (strcmp(field, "mark") == 0) {
+        float newMark = atof(value);
+        rec->Mark = newMark;
     }
-    
+    else {
+        printf("CMS: Unsupported field '%s'.\n", field);
+        return;
+    }
+
+    /* ---- WRITE UPDATED RECORDS TO FILE ---- */
+    FILE *fp = fopen("Sample-CMS.txt", "w");
+    if (!fp) {
+        printf("CMS: File update failed.\n");
+        return;
+    }
+
+    fprintf(fp, "ID\tName\tProgramme\tMark\n");
+    for (int i = 0; i < recordCount; i++) {
+        fprintf(fp, "%d\t%s\t%s\t%.2f\n",
+            student_records[i].ID,
+            student_records[i].Name,
+            student_records[i].Programme,
+            student_records[i].Mark);
+    }
+
+    fclose(fp);
+
+    /* ---- SUCCESS OUTPUT ---- */
     printf("CMS: The record with ID=%d is successfully updated.\n", id);
 }
 
