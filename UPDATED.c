@@ -76,6 +76,42 @@ static int isAlphaOnly(const char *s) {
     return 1;
 }
 
+static void trim_newline(char *s) {
+    if (!s) return;
+    size_t n = strlen(s);
+    if (n && (s[n-1] == '\n' || s[n-1] == '\r')) s[n-1] = '\0';
+}
+
+static int idExists(int id) {
+    for (int i = 0; i < recordCount; i++) {
+        if (student_records[i].ID == id) return 1;
+    }
+    return 0;
+}
+
+static int ensureCapacity(int want) {
+    if (capacity >= want) return 1;
+    
+    int newCap = (capacity > 0) ? capacity : 16;
+    while (newCap < want) newCap *= 2;
+    
+    StudentRecords *tmp = realloc(student_records, newCap * sizeof(*tmp));
+    if (!tmp) {
+        perror("realloc failed");
+        return 0;
+    }
+    student_records = tmp;
+    capacity = newCap;
+    return 1;
+}
+
+static int findIndexById(int id) {
+    for (int i = 0; i < recordCount; i++) {
+        if (student_records[i].ID == id) return i;
+    }
+    return -1;
+}
+
 
 
 int main() {
@@ -106,9 +142,42 @@ int main() {
         trim(command);
         
         if (strcmp(command, "exit") == 0) {
+            if (!isFileOpen) {
             printf("CMS: Exiting program. Goodbye!\n");
             free(student_records);
             break;
+            }
+
+            // Ask user if they want to save before exiting
+            char confirm[10];
+            while (1) {
+                printf("CMS: Do you want to save the database before exiting? (Y/N)\n");
+                printf("P4_6: ");
+
+                if (!fgets(confirm, sizeof(confirm), stdin)) {
+                    printf("CMS: Input error. Please try again.\n");
+                    continue;
+                }
+
+                trim(confirm);
+
+                if (strcmp(confirm, "Y") == 0 || strcmp(confirm, "y") == 0) {
+                    saveDatabase();
+                    printf("CMS: Exiting program. Goodbye!\n");
+                    free(student_records);
+                    break;
+                }
+                else if (strcmp(confirm, "N") == 0 || strcmp(confirm, "n") == 0) {
+                    printf("CMS: Exiting without saving. Goodbye!\n");
+                    free(student_records);
+                    break;
+                }
+                else {
+                    printf("CMS: Invalid option. Please type Y or N.\n");
+                }
+            }
+
+            break;  // Exit main loop
         }
         else if (strcmp(command, "open") == 0) {
             openDatabase();
@@ -874,38 +943,3 @@ void toLowerCase(char *str) {
     }
 }
 
-static void trim_newline(char *s) {
-    if (!s) return;
-    size_t n = strlen(s);
-    if (n && (s[n-1] == '\n' || s[n-1] == '\r')) s[n-1] = '\0';
-}
-
-static int idExists(int id) {
-    for (int i = 0; i < recordCount; i++) {
-        if (student_records[i].ID == id) return 1;
-    }
-    return 0;
-}
-
-static int ensureCapacity(int want) {
-    if (capacity >= want) return 1;
-    
-    int newCap = (capacity > 0) ? capacity : 16;
-    while (newCap < want) newCap *= 2;
-    
-    StudentRecords *tmp = realloc(student_records, newCap * sizeof(*tmp));
-    if (!tmp) {
-        perror("realloc failed");
-        return 0;
-    }
-    student_records = tmp;
-    capacity = newCap;
-    return 1;
-}
-
-static int findIndexById(int id) {
-    for (int i = 0; i < recordCount; i++) {
-        if (student_records[i].ID == id) return i;
-    }
-    return -1;
-}
