@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 
 #define MAX_NAME 100
 #define MAX_PROGRAMME 100
@@ -47,6 +49,8 @@ static void trim_newline(char *s);
 static int idExists(int id);
 static int ensureCapacity(int want);
 static int findIndexById(int id);
+static int parseID(const char *str, int *id);
+static int parseMark(const char *str, float *mark); 
 
 int main(void) {
     char input[256];
@@ -85,6 +89,7 @@ int main(void) {
             printf("DELETE ID=..\n");
             printf("SAVE\n");
             printf("SHOW SUMMARY\n");
+            printf("\nNote: ID must be exactly 7 digits starting with '2' (e.g., 2123456)\n");
             printf("EXIT\n");
         }
         else if (strcmp(command, "open") == 0) {
@@ -172,6 +177,14 @@ void printDeclaration() {
 }
 
 void openDatabase() {
+    // Free existing data before loading new
+    if (student_records != NULL) {
+        free(student_records);
+        student_records = NULL;
+    }
+    capacity = 0;
+    recordCount = 0;
+    
     FILE *file = fopen(FILENAME, "r");
     if (file == NULL) {
         printf("CMS: Database file \"%s\" not found. Creating new database.\n", FILENAME);
@@ -180,10 +193,12 @@ void openDatabase() {
         return;
     }
 
-    recordCount = 0;
     char line[300];
+    int lineNum = 0;  // ✅ FIXED: Added lineNum variable
 
     while (fgets(line, sizeof(line), file)) {
+        lineNum++;  // ✅ FIXED: Increment line number
+        
         if (!ensureCapacity(recordCount + 1)) {
             printf("CMS: Error - Unable to allocate memory.\n");
             fclose(file);
@@ -199,25 +214,71 @@ void openDatabase() {
         // Try reading with grade first
         int items = sscanf(line, "%d\t%99[^\t]\t%99[^\t]\t%f\t%2s",
                            &id, name, programme, &mark, grade);
-
+        
         if (items == 5) {
-            // Has grade field
+            // Has grade field - validate data
+            if (id <= 0) {
+                printf("CMS: Warning - Line %d: Invalid ID (%d), skipping.\n", lineNum, id);
+                continue;
+            }
+            if (strlen(name) == 0) {
+                printf("CMS: Warning - Line %d: Empty name (ID=%d), skipping.\n", lineNum, id);
+                continue;
+            }
+            if (strlen(programme) == 0) {
+                printf("CMS: Warning - Line %d: Empty programme (ID=%d), skipping.\n", lineNum, id);
+                continue;
+            }
+            if (mark < 0 || mark > 100) {
+                printf("CMS: Warning - Line %d: Invalid mark %.1f (ID=%d), skipping.\n", lineNum, mark, id);
+                continue;
+            }
+            if (idExists(id)) {
+                printf("CMS: Warning - Line %d: Duplicate ID %d, skipping.\n", lineNum, id);
+                continue;
+            }
+            
             student_records[recordCount].ID = id;
             strcpy(student_records[recordCount].Name, name);
             strcpy(student_records[recordCount].Programme, programme);
             student_records[recordCount].Mark = mark;
             strcpy(student_records[recordCount].Grade, grade);
             recordCount++;
+            
         } else if (items == 4) {
-            // No grade field, calculate it
+            // No grade field, calculate it - validate data
+            if (id <= 0) {
+                printf("CMS: Warning - Line %d: Invalid ID (%d), skipping.\n", lineNum, id);
+                continue;
+            }
+            if (strlen(name) == 0) {
+                printf("CMS: Warning - Line %d: Empty name (ID=%d), skipping.\n", lineNum, id);
+                continue;
+            }
+            if (strlen(programme) == 0) {
+                printf("CMS: Warning - Line %d: Empty programme (ID=%d), skipping.\n", lineNum, id);
+                continue;
+            }
+            if (mark < 0 || mark > 100) {
+                printf("CMS: Warning - Line %d: Invalid mark %.1f (ID=%d), skipping.\n", lineNum, mark, id);
+                continue;
+            }
+            if (idExists(id)) {
+                printf("CMS: Warning - Line %d: Duplicate ID %d, skipping.\n", lineNum, id);
+                continue;
+            }
+            
+            // Data is valid
             student_records[recordCount].ID = id;
             strcpy(student_records[recordCount].Name, name);
             strcpy(student_records[recordCount].Programme, programme);
             student_records[recordCount].Mark = mark;
             calculateGrade(mark, student_records[recordCount].Grade);
             recordCount++;
+            
         } else {
             // Skip invalid lines
+            printf("CMS: Warning - Line %d: Invalid format, skipping.\n", lineNum);
             continue;
         }
     }
@@ -225,6 +286,7 @@ void openDatabase() {
     fclose(file);
     isFileOpen = 1;
     printf("CMS: The database file \"%s\" is successfully opened.\n", FILENAME);
+    printf("CMS: Loaded %d valid records.\n", recordCount);
 }
 
 void showAll() {
@@ -248,7 +310,6 @@ void showAll() {
                student_records[i].Mark);
     }
 }
-
 void insertRecord(char *input) {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
@@ -268,32 +329,85 @@ void insertRecord(char *input) {
     // Parse the input: INSERT ID=2401234 Name=Michelle Lee Programme=Information Security Mark=73.2
     char *token = strtok(buffer, " ");
     while (token != NULL) {
-        if (strncmp(token, "ID=", 3) == 0) {
-            id = atoi(token + 3);
+        // Convert token to lowercase for case-insensitive comparison
+        char tokenLower[256];
+        strncpy(tokenLower, token, sizeof(tokenLower) - 1);
+        tokenLower[sizeof(tokenLower) - 1] = '\0';
+        toLowerCase(tokenLower);
+
+        if (strncmp(tokenLower, "id=", 3) == 0) {
+            if (!parseID(token + 3, &id)) {
+                printf("CMS: Invalid ID format. ID must be 7 digits starting with 2\n");
+                return;
+            }
         }
-        else if (strncmp(token, "Mark=", 5) == 0) {
-            mark = (float)atof(token + 5);
+        else if (strncmp(tokenLower, "mark=", 5) == 0) {
+            if (!parseMark(token + 5, &mark)) {
+                printf("CMS: Invalid mark format. Mark must be a number between 0 and 100.\n");
+                return;
+            }
         }
-        else if (strncmp(token, "Name=", 5) == 0) {
+        else if (strncmp(tokenLower, "name=", 5) == 0) {
             char *nameStart = token + 5;
+            // Check initial length:
+            if (strlen(nameStart) >= MAX_NAME) {
+                printf("CMS: Name too long (max %d characters).\n", MAX_NAME - 1);
+                return;
+            }
             strcpy(name, nameStart);
-            // Continue reading until we hit Programme= or Mark=
             token = strtok(NULL, " ");
-            while (token != NULL &&
-                   strncmp(token, "Programme=", 10) != 0 &&
-                   strncmp(token, "Mark=", 5) != 0) {
+            while (token != NULL) {
+                // Convert next token to lowercase to check if it's a field
+                char nextTokenLower[256];
+                strncpy(nextTokenLower, token, sizeof(nextTokenLower) - 1);
+                nextTokenLower[sizeof(nextTokenLower) - 1] = '\0';
+                toLowerCase(nextTokenLower);
+                
+                // Stop if we encounter the next field
+                if (strncmp(nextTokenLower, "programme=", 10) == 0 || 
+                    strncmp(nextTokenLower, "mark=", 5) == 0) {
+                    // Put the token back for the next iteration
+                    // We'll use a simple approach: break and let the outer loop handle it
+                    break;
+                }
+                
+                // Check the length before concatenating
+                if (strlen(name) + strlen(token) + 1 >= MAX_NAME) {
+                    printf("CMS: Name too long (max %d characters).\n", MAX_NAME - 1);
+                    return;
+                }
                 strcat(name, " ");
                 strcat(name, token);
                 token = strtok(NULL, " ");
             }
             continue;
         }
-        else if (strncmp(token, "Programme=", 10) == 0) {
+        else if (strncmp(tokenLower, "programme=", 10) == 0) {
             char *progStart = token + 10;
+            // Check initial length for programme
+            if (strlen(progStart) >= MAX_PROGRAMME) {
+                printf("CMS: Programme name too long (max %d characters).\n", MAX_PROGRAMME - 1);
+                return;
+            }
             strcpy(programme, progStart);
-            // Continue reading until we hit Mark=
             token = strtok(NULL, " ");
-            while (token != NULL && strncmp(token, "Mark=", 5) != 0) {
+            while (token != NULL) {
+                // Convert next token to lowercase to check if it's a field
+                char nextTokenLower[256];
+                strncpy(nextTokenLower, token, sizeof(nextTokenLower) - 1);
+                nextTokenLower[sizeof(nextTokenLower) - 1] = '\0';
+                toLowerCase(nextTokenLower);
+                
+                // Stop if we encounter the next field
+                if (strncmp(nextTokenLower, "mark=", 5) == 0) {
+                    break;
+                }
+                
+                // Check the length before concatenating
+                if (strlen(programme) + strlen(token) + 1 >= MAX_PROGRAMME) {
+                    printf("CMS: Programme name too long (max %d characters).\n", MAX_PROGRAMME - 1);
+                    return;
+                }
                 strcat(programme, " ");
                 strcat(programme, token);
                 token = strtok(NULL, " ");
@@ -368,8 +482,11 @@ void queryRecord(char *input) {
         toLowerCase(tokenLower);  // make copy lowercase
 
         if (strncmp(tokenLower, "id=", 3) == 0) {
-            // use original token to get the number
-            id = atoi(token + 3);
+            // Check for the ID
+            if (!parseID(token + 3, &id)) {
+                printf("CMS: Invalid ID format. ID must be exactly 7 digits starting with 2.\n");
+                return;
+            }
             break;
         }
 
@@ -395,127 +512,154 @@ void queryRecord(char *input) {
            student_records[index].Programme,
            student_records[index].Mark);
 }
-
-
 void updateRecord(char *input) {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
         return;
     }
 
-    // Clear leftover input
-    int ch;
-    while ((ch = getchar()) != '\n' && ch != EOF);
+    int id = -1;
 
-    char input[256];
-    printf("P4_6: ");
-    fflush(stdout);
+    // Work on a copy because strtok modifies the string
+    char buffer[256];
+    strncpy(buffer, input, sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0';
 
-    if (!fgets(input, sizeof(input), stdin)) {
-        printf("CMS: Input error.\n");
-        return;
-    }
+    // Parse: UPDATE ID=2401234
+    char *token = strtok(buffer, " ");
+    while (token != NULL) {
+        // Convert token to lowercase for case-insensitive comparison
+        char tokenLower[256];
+        strncpy(tokenLower, token, sizeof(tokenLower) - 1);
+        tokenLower[sizeof(tokenLower) - 1] = '\0';
+        toLowerCase(tokenLower);
 
-    input[strcspn(input, "\n")] = '\0';
-
-    /* Convert whole input to uppercase for consistent parsing */
-    char upperInput[256];
-    for (int i = 0; input[i]; i++)
-        upperInput[i] = toupper(input[i]);
-    upperInput[strlen(input)] = '\0';
-
-    /* Extract ID and field=value using a more flexible pattern */
-    int id;
-    char field[50], value[100];
-
-    int parsed = sscanf(upperInput, "UPDATE ID=%d %49[^=]=%99[^\n]", &id, field, value);
-
-    if (parsed != 3) {
-        printf("CMS: Invalid UPDATE format.\n");
-        return;
-    }
-
-    /* Convert field back to lowercase to compare */
-    for (int i = 0; field[i]; i++)
-        field[i] = tolower(field[i]);
-
-    /* Restore original-case value (upperInput lost original spacing) */
-    char *equalSign = strchr(input, '=');
-    if (equalSign) {
-        strncpy(value, equalSign + 1, sizeof(value) - 1);
-        value[sizeof(value) - 1] = '\0';
-    }
-
-    /* ---- FIND RECORD ---- */
-    int index = -1;
-    for (int i = 0; i < recordCount; i++) {
-        if (student_records[i].ID == id) {
-            index = i;
+        if (strncmp(tokenLower, "id=", 3) == 0) {
+            // Check for the ID format - use original token to preserve case for parsing
+            if (!parseID(token + 3, &id)) {
+                printf("CMS: Invalid ID format. ID must be exactly 7 digits starting with '2' (e.g., 2123456).\n");
+                return;
+            }
             break;
         }
+        token = strtok(NULL, " ");
     }
 
+    if (id == -1) {
+        printf("CMS: Invalid input. Please provide ID in format: UPDATE ID=xxxxxxx\n");
+        return;
+    }
+
+    // Find record
+    int index = findIndexById(id);
     if (index == -1) {
         printf("CMS: The record with ID=%d does not exist.\n", id);
         return;
     }
 
+    // Now parse the field and value from the original input
+    char field[50] = "";
+    char value[100] = "";
+    
+    // Find the position after "ID=xxxxxxx"
+    char *idPos = strstr(input, "ID=");
+    if (!idPos) {
+        // Try lowercase
+        idPos = strstr(input, "id=");
+    }
+    if (!idPos) {
+        idPos = strstr(input, "Id=");
+    }
+    
+    if (idPos) {
+        // Move past the ID part (ID= + 7 digits)
+        char *fieldStart = idPos + 3 + 7; // "ID=" + 7 digits
+        
+        // Skip any spaces
+        while (*fieldStart == ' ') fieldStart++;
+        
+        if (*fieldStart != '\0') {
+            // Parse field=value
+            char temp[256];
+            strncpy(temp, fieldStart, sizeof(temp) - 1);
+            temp[sizeof(temp) - 1] = '\0';
+            
+            char *equals = strchr(temp, '=');
+            if (equals) {
+                *equals = '\0';
+                strncpy(field, temp, sizeof(field) - 1);
+                field[sizeof(field) - 1] = '\0';
+                
+                char *valueStart = equals + 1;
+                // Skip spaces after equals
+                while (*valueStart == ' ') valueStart++;
+                
+                strncpy(value, valueStart, sizeof(value) - 1);
+                value[sizeof(value) - 1] = '\0';
+            }
+        }
+    }
+
+    // If no field=value was found, show error
+    if (strlen(field) == 0 || strlen(value) == 0) {
+        printf("CMS: Invalid UPDATE format.\n");
+        printf("CMS: Example: UPDATE ID=2123456 Programme=Applied AI\n");
+        printf("CMS: Supported fields: Name, Programme, Mark\n");
+        return;
+    }
+
+    // Convert field name to lowercase for comparison
+    for (int i = 0; field[i]; i++) {
+        field[i] = (char)tolower((unsigned char)field[i]);
+    }
+
+    // Trim whitespace from field and value
+    trim(field);
+    trim(value);
+
     StudentRecords *rec = &student_records[index];
 
-    /* ---- APPLY UPDATE ---- */
     if (strcmp(field, "name") == 0) {
-        if (strlen(value) > 99) {
-            printf("CMS: Name too long.\n");
+        if (strlen(value) == 0) {
+            printf("CMS: Name cannot be empty.\n");
             return;
         }
-        strcpy(rec->Name, value);
+        if (strlen(value) >= sizeof(rec->Name)) {
+            printf("CMS: Name too long (max %d characters).\n", (int)sizeof(rec->Name) - 1);
+            return;
+        }
+        strncpy(rec->Name, value, sizeof(rec->Name) - 1);
+        rec->Name[sizeof(rec->Name) - 1] = '\0';
     }
     else if (strcmp(field, "programme") == 0) {
-        if (strlen(value) > 99) {
-            printf("CMS: Programme too long.\n");
+        if (strlen(value) == 0) {
+            printf("CMS: Programme cannot be empty.\n");
             return;
         }
-        strcpy(rec->Programme, value);
+        if (strlen(value) >= sizeof(rec->Programme)) {
+            printf("CMS: Programme too long (max %d characters).\n", (int)sizeof(rec->Programme) - 1);
+            return;
+        }
+        strncpy(rec->Programme, value, sizeof(rec->Programme) - 1);
+        rec->Programme[sizeof(rec->Programme) - 1] = '\0';
     }
     else if (strcmp(field, "mark") == 0) {
         float newMark;
-        if (sscanf(value, "%f", &newMark) != 1 || newMark < 0 || newMark > 100) {
-            printf("CMS: Invalid mark. Must be between 0 and 100.\n");
+        if (!parseMark(value, &newMark)) {
+            printf("CMS: Invalid mark. Mark must be a number between 0 and 100.\n");
             return;
         }
         rec->Mark = newMark;
+        calculateGrade(newMark, rec->Grade);
     }
     else {
         printf("CMS: Unsupported field '%s'.\n", field);
+        printf("CMS: Supported fields: Name, Programme, Mark\n");
         return;
     }
-
-    /* ---- WRITE TO TEMP FILE (SAFER) ---- */
-    FILE *fp = fopen("Sample-CMS.tmp", "w");
-    if (!fp) {
-        printf("CMS: File update failed.\n");
-        return;
-    }
-
-    fprintf(fp, "ID\tName\tProgramme\tMark\n");
-    for (int i = 0; i < recordCount; i++) {
-        fprintf(
-            fp, "%d\t%s\t%s\t%.2f\n",
-            student_records[i].ID,
-            student_records[i].Name,
-            student_records[i].Programme,
-            student_records[i].Mark
-        );
-    }
-    fclose(fp);
-
-    // Replace old file
-    remove("Sample-CMS.txt");
-    rename("Sample-CMS.tmp", "Sample-CMS.txt");
 
     printf("CMS: The record with ID=%d is successfully updated.\n", id);
 }
-
 void deleteRecord(char *input) {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
@@ -533,7 +677,11 @@ void deleteRecord(char *input) {
     char *token = strtok(buffer, " ");
     while (token != NULL) {
         if (strncmp(token, "ID=", 3) == 0) {
-            id = atoi(token + 3);
+            // Check for ID
+            if (!parseID(token + 3, &id)) {
+                printf("CMS: Invalid ID format. ID must be exactly 7 digits starting with '2'.\n");
+                return;
+            }
             break;
         }
         token = strtok(NULL, " ");
@@ -901,4 +1049,88 @@ static int findIndexById(int id) {
         if (student_records[i].ID == id) return i;
     }
     return -1;
+}
+
+// ID validation
+static int parseID(const char *str, int *id) {
+    if (!str || *str == '\0') {
+        return 0;  // Empty string
+    }
+    
+    // Check if starts with '2'
+    if (*str != '2') {
+        return 0;  // Must start with 2
+    }
+    
+    // Check total length is exactly 7 digits
+    if (strlen(str) != 7) {
+        return 0;  // Must be exactly 7 digits
+    }
+    
+    // Check all characters are digits
+    for (int i = 0; i < 7; i++) {
+        if (!isdigit((unsigned char)str[i])) {
+            return 0;  // Contains non-digit characters
+        }
+    }
+    
+    char *endptr;
+    errno = 0;
+    long val = strtol(str, &endptr, 10);
+    
+    // Check for various error conditions
+    if (errno == ERANGE) {
+        return 0;  // Overflow/underflow
+    }
+    if (*endptr != '\0') {
+        return 0;  // Contains non-numeric characters
+    }
+    if (str == endptr) {
+        return 0;  // No conversion performed
+    }
+    if (val < 2000000 || val > 2999999) {
+        return 0;  // Out of valid range (must be 2000000-2999999)
+    }
+    
+    *id = (int)val;
+    return 1;  // Success
+}
+
+// ✅ Robust mark parsing function
+static int parseMark(const char *str, float *mark) {
+    if (!str || *str == '\0') {
+        return 0;  // Empty string
+    }
+    
+    // Check if starts with a digit, negative sign, or decimal point
+    if (!isdigit((unsigned char)*str) && *str != '-' && *str != '+' && *str != '.') {
+        return 0;  // Invalid start character
+    }
+    
+    char *endptr;
+    errno = 0;
+    float val = strtof(str, &endptr);
+    
+    // Check for various error conditions
+    if (errno == ERANGE) {
+        return 0;  // Overflow/underflow
+    }
+    if (*endptr != '\0') {
+        // Check if remaining characters are just whitespace
+        while (*endptr && isspace((unsigned char)*endptr)) {
+            endptr++;
+        }
+        if (*endptr != '\0') {
+            return 0;  // Contains non-numeric characters
+        }
+    }
+    if (str == endptr) {
+        return 0;  // No conversion performed
+    }
+    if (val < 0.0f || val > 100.0f) {
+        return 0;  // Out of valid range
+    }
+    
+    *mark = val;
+    return 1;  // Success
 }
