@@ -397,38 +397,64 @@ void queryRecord(char *input) {
 }
 
 
-void updateRecord(char *input) {
+void updateRecord() {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
         return;
     }
 
+    // Clear leftover input
+    int ch;
+    while ((ch = getchar()) != '\n' && ch != EOF);
+
+    char input[256];
+    printf("P4_6: ");
+    fflush(stdout);
+
+    if (!fgets(input, sizeof(input), stdin)) {
+        printf("CMS: Input error.\n");
+        return;
+    }
+
+    input[strcspn(input, "\n")] = '\0';
+
+    /* Convert whole input to uppercase for consistent parsing */
+    char upperInput[256];
+    for (int i = 0; input[i]; i++)
+        upperInput[i] = toupper(input[i]);
+    upperInput[strlen(input)] = '\0';
+
+    /* Extract ID and field=value using a more flexible pattern */
     int id;
     char field[50], value[100];
 
-    // Allow UPDATE / update / UpDaTe by ignoring the first word and starting from ID=
-    char *p = strstr(input, "ID=");
-    if (!p) {
-        printf("CMS: Invalid UPDATE format.\n");
-        printf("CMS: Example: UPDATE ID=2401234 Programme=Applied AI\n");
-        return;
-    }
+    int parsed = sscanf(upperInput, "UPDATE ID=%d %49[^=]=%99[^\n]", &id, field, value);
 
-    // Now parse from "ID=..." so case of UPDATE doesn't matter
-    int parsed = sscanf(p, "ID=%d %49[^=]=%99[^\n]", &id, field, value);
     if (parsed != 3) {
         printf("CMS: Invalid UPDATE format.\n");
-        printf("CMS: Example: UPDATE ID=2401234 Programme=Applied AI\n");
         return;
     }
 
-    // Convert field name to lowercase for comparison
-    for (int i = 0; field[i]; i++) {
-        field[i] = (char)tolower((unsigned char)field[i]);
+    /* Convert field back to lowercase to compare */
+    for (int i = 0; field[i]; i++)
+        field[i] = tolower(field[i]);
+
+    /* Restore original-case value (upperInput lost original spacing) */
+    char *equalSign = strchr(input, '=');
+    if (equalSign) {
+        strncpy(value, equalSign + 1, sizeof(value) - 1);
+        value[sizeof(value) - 1] = '\0';
     }
 
-    // Find record
-    int index = findIndexById(id);
+    /* ---- FIND RECORD ---- */
+    int index = -1;
+    for (int i = 0; i < recordCount; i++) {
+        if (student_records[i].ID == id) {
+            index = i;
+            break;
+        }
+    }
+
     if (index == -1) {
         printf("CMS: The record with ID=%d does not exist.\n", id);
         return;
@@ -436,27 +462,56 @@ void updateRecord(char *input) {
 
     StudentRecords *rec = &student_records[index];
 
+    /* ---- APPLY UPDATE ---- */
     if (strcmp(field, "name") == 0) {
-        strncpy(rec->Name, value, sizeof(rec->Name) - 1);
-        rec->Name[sizeof(rec->Name) - 1] = '\0';
+        if (strlen(value) > 99) {
+            printf("CMS: Name too long.\n");
+            return;
+        }
+        strcpy(rec->Name, value);
     }
     else if (strcmp(field, "programme") == 0) {
-        strncpy(rec->Programme, value, sizeof(rec->Programme) - 1);
-        rec->Programme[sizeof(rec->Programme) - 1] = '\0';
+        if (strlen(value) > 99) {
+            printf("CMS: Programme too long.\n");
+            return;
+        }
+        strcpy(rec->Programme, value);
     }
     else if (strcmp(field, "mark") == 0) {
-        float newMark = (float)atof(value);
-        if (newMark < 0 || newMark > 100) {
-            printf("CMS: Invalid mark. Mark should be between 0 and 100.\n");
+        float newMark;
+        if (sscanf(value, "%f", &newMark) != 1 || newMark < 0 || newMark > 100) {
+            printf("CMS: Invalid mark. Must be between 0 and 100.\n");
             return;
         }
         rec->Mark = newMark;
-        calculateGrade(newMark, rec->Grade);
     }
     else {
         printf("CMS: Unsupported field '%s'.\n", field);
         return;
     }
+
+    /* ---- WRITE TO TEMP FILE (SAFER) ---- */
+    FILE *fp = fopen("Sample-CMS.tmp", "w");
+    if (!fp) {
+        printf("CMS: File update failed.\n");
+        return;
+    }
+
+    fprintf(fp, "ID\tName\tProgramme\tMark\n");
+    for (int i = 0; i < recordCount; i++) {
+        fprintf(
+            fp, "%d\t%s\t%s\t%.2f\n",
+            student_records[i].ID,
+            student_records[i].Name,
+            student_records[i].Programme,
+            student_records[i].Mark
+        );
+    }
+    fclose(fp);
+
+    // Replace old file
+    remove("Sample-CMS.txt");
+    rename("Sample-CMS.tmp", "Sample-CMS.txt");
 
     printf("CMS: The record with ID=%d is successfully updated.\n", id);
 }
