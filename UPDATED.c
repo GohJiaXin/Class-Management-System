@@ -1098,7 +1098,17 @@ void filterByProgramme() {
     for (int i = 0; i < recordCount; i++) {
         int alreadyPrinted = 0;
         for (int j = 0; j < i; j++) {
-            if (strcmp(student_records[i].Programme, student_records[j].Programme) == 0) {
+            // ✅ Case-insensitive comparison for uniqueness
+            char prog1Lower[MAX_PROGRAMME];
+            char prog2Lower[MAX_PROGRAMME];
+            
+            strcpy(prog1Lower, student_records[i].Programme);
+            strcpy(prog2Lower, student_records[j].Programme);
+            
+            toLowerCase(prog1Lower);
+            toLowerCase(prog2Lower);
+            
+            if (strcmp(prog1Lower, prog2Lower) == 0) {
                 alreadyPrinted = 1;
                 break;
             }
@@ -1116,57 +1126,61 @@ void filterByProgramme() {
 
     // Prompt user to select programme
     char selected[MAX_PROGRAMME];
-    printf("CMS: Please type the programme exactly as shown above:\n");
+    printf("CMS: Please type the programme name (case insensitive):\n");
     printf("P4_6: ");
     if (!fgets(selected, sizeof(selected), stdin)) {
         printf("CMS: Input error.\n");
         return;
     }
     trim_newline(selected);
+    trim(selected);  // ✅ Trim whitespace
 
     if (strlen(selected) == 0) {
         printf("CMS: Invalid input. Programme name cannot be empty.\n");
         return;
     }
 
+    // ✅ Convert input to lowercase for comparison
+    char selectedLower[MAX_PROGRAMME];
+    strcpy(selectedLower, selected);
+    toLowerCase(selectedLower);
+
     // Validate that the programme exists (case-insensitive)
     int exists = 0;
+    char matchedProgramme[MAX_PROGRAMME] = "";  // ✅ Store the actual programme name
+    
     for (int i = 0; i < recordCount; i++) {
         char progLower[MAX_PROGRAMME];
-        char inputLower[MAX_PROGRAMME];
-
         strcpy(progLower, student_records[i].Programme);
-        strcpy(inputLower, selected);
-
         toLowerCase(progLower);
-        toLowerCase(inputLower);
 
-        if (strcmp(progLower, inputLower) == 0) {
+        if (strcmp(progLower, selectedLower) == 0) {
             exists = 1;
+            // ✅ Store the first matched programme name for display
+            if (strlen(matchedProgramme) == 0) {
+                strcpy(matchedProgramme, student_records[i].Programme);
+            }
             break;
         }
     }
 
     if (!exists) {
-        printf("CMS: Invalid programme. Please choose a programme from the list. Exiting Filter..\n");
+        printf("CMS: Invalid programme. Please choose a programme from the list.\n");
+        printf("CMS: Exiting Filter..\n");
         return;
     }
 
-    // Print filtered table
-    printf("CMS: Records for programme \"%s\":\n", selected);
+    // Print filtered table using the matched programme name
+    printf("CMS: Records for programme \"%s\":\n", matchedProgramme);
     printf("%-10s %-25s %-30s %-10s\n", "ID", "Name", "Programme", "Mark");
     int found = 0;
+    
     for (int i = 0; i < recordCount; i++) {
         char progLower[MAX_PROGRAMME];
-        char inputLower[MAX_PROGRAMME];
-
         strcpy(progLower, student_records[i].Programme);
-        strcpy(inputLower, selected);
-
         toLowerCase(progLower);
-        toLowerCase(inputLower);
 
-        if (strcmp(progLower, inputLower) == 0) {
+        if (strcmp(progLower, selectedLower) == 0) {
             printf("%-10d %-25s %-30s %-10.1f\n",
                    student_records[i].ID,
                    student_records[i].Name,
@@ -1204,15 +1218,59 @@ void filterByMarkRange() {
         return;
     }
     trim_newline(input);
+    trim(input);  // ✅ Trim whitespace
 
-    // Strictly enforce "XX - XX" style (spaces around '-'), but allow extra spaces
-    if (sscanf(input, "%f - %f", &low, &high) != 2) {
-        printf("CMS: Invalid input format. Please use: XX - XX (e.g. 50 - 80).\n");
+    // ✅ Check for empty input
+    if (strlen(input) == 0) {
+        printf("CMS: Input cannot be empty.\n");
         return;
     }
 
-    if (low < 0 || high > 100 || low > high) {
-        printf("CMS: Invalid range. Marks must be between 0 and 100 and lower <= upper.\n");
+    // ✅ More flexible parsing - try different formats
+    int parsed = 0;
+    
+    // Try format: "XX - XX" (with spaces around dash)
+    if (sscanf(input, "%f - %f", &low, &high) == 2) {
+        parsed = 1;
+    }
+    // Try format: "XX-XX" (no spaces)
+    else if (sscanf(input, "%f-%f", &low, &high) == 2) {
+        parsed = 1;
+    }
+    // Try format: "XX  -  XX" (multiple spaces)
+    else {
+        // Manual parsing for more flexibility
+        char *dash = strchr(input, '-');
+        if (dash != NULL) {
+            *dash = '\0';  // Split at dash
+            char *lowStr = input;
+            char *highStr = dash + 1;
+            
+            // Trim both parts
+            trim(lowStr);
+            trim(highStr);
+            
+            // Try to parse
+            if (parseMark(lowStr, &low) && parseMark(highStr, &high)) {
+                parsed = 1;
+            }
+        }
+    }
+
+    if (!parsed) {
+        printf("CMS: Invalid input format. Please use: XX - XX (e.g. 50 - 80).\n");
+        printf("CMS: You can also use: XX-XX or XX  -  XX\n");
+        return;
+    }
+
+    // ✅ Validate range
+    if (low < 0 || high > 100) {
+        printf("CMS: Invalid range. Both marks must be between 0 and 100.\n");
+        return;
+    }
+    
+    if (low > high) {
+        printf("CMS: Invalid range. Lower bound (%.1f) cannot be greater than upper bound (%.1f).\n", low, high);
         return;
     }
 
