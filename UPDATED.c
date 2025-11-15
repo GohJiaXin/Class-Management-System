@@ -66,6 +66,10 @@ static int isReasonableString(const char *str);
 static int isAllWhitespace(const char *str);
 static int isValidFieldValue(const char *str);
 
+// NEW: SQL injection prevention functions
+static int containsSQLInjectionPatterns(const char *str);
+static int isSecureFieldValue(const char *str);
+
 int main(void) {
     char input[256];
     char command[256];
@@ -91,6 +95,12 @@ int main(void) {
         // ✅ SECURITY FIX: Check for command injection
         if (strchr(input, ';') != NULL) {
             printf("CMS: Invalid character ';' in command.\n");
+            continue;
+        }
+
+        // ✅ NEW SECURITY FIX: Check for SQL injection in entire command
+        if (containsSQLInjectionPatterns(input)) {
+            printf("CMS: Security warning: Potential injection attempt detected in command.\n");
             continue;
         }
 
@@ -247,6 +257,65 @@ void promptSaveBeforeExit() {
     } else {
         printf("CMS: Invalid input. Exiting without saving.\n");
     }
+}
+
+// NEW: Security validation to prevent SQL injection patterns
+static int containsSQLInjectionPatterns(const char *str) {
+    if (!str) return 0;
+    
+    char lowerStr[256];
+    strncpy(lowerStr, str, sizeof(lowerStr) - 1);
+    lowerStr[sizeof(lowerStr) - 1] = '\0';
+    toLowerCase(lowerStr);
+    
+    // Common SQL injection keywords and patterns
+    const char *sqlPatterns[] = {
+        "union", "select", "insert", "update", "delete", "drop", "create", 
+        "alter", "exec", "execute", "script", "javascript", "onload", 
+        "onerror", "onclick", "where", "from", "table", "database",
+        "admin", "password", "1=1", "'1'='1", "or 1=1", "and 1=1",
+        "--", "/*", "*/", ";", "\"", "'", "`", "\\"
+    };
+    
+    int patternCount = sizeof(sqlPatterns) / sizeof(sqlPatterns[0]);
+    for (int i = 0; i < patternCount; i++) {
+        if (strstr(lowerStr, sqlPatterns[i]) != NULL) {
+            return 1; // SQL injection pattern detected
+        }
+    }
+    
+    return 0; // No SQL injection patterns found
+}
+
+// NEW: Enhanced field validation with SQL injection detection
+static int isSecureFieldValue(const char *str) {
+    if (!str) return 0;
+    
+    // Check basic validity first
+    if (!isValidFieldValue(str)) {
+        return 0;
+    }
+    
+    // Check for SQL injection patterns
+    if (containsSQLInjectionPatterns(str)) {
+        printf("CMS: Security warning: Potential injection attempt detected.\n");
+        return 0;
+    }
+    
+    // Additional security: limit consecutive special characters
+    int specialCount = 0;
+    for (int i = 0; str[i]; i++) {
+        if (!isalnum((unsigned char)str[i]) && !isspace((unsigned char)str[i])) {
+            specialCount++;
+            if (specialCount > 3) { // Allow some punctuation but not many
+                return 0;
+            }
+        } else {
+            specialCount = 0;
+        }
+    }
+    
+    return 1;
 }
 
 void printDeclaration() {
@@ -490,9 +559,9 @@ void insertRecord(char *input) {
                 return;
             }
             
-            // ✅ SECURITY FIX: Validate field content
-            if (!isValidFieldValue(nameStart)) {
-                printf("CMS: Name contains invalid characters.\n");
+            // ✅ SECURITY FIX: Enhanced security validation
+            if (!isSecureFieldValue(nameStart)) {
+                printf("CMS: Name contains invalid or potentially dangerous characters.\n");
                 return;
             }
             
@@ -511,15 +580,15 @@ void insertRecord(char *input) {
                     break;
                 }
                 
-                // Check the length before concatenating
-                if (strlen(name) + strlen(token) + 1 >= MAX_NAME) {
-                    printf("CMS: Name too long (max %d characters).\n", MAX_NAME - 1);
+                // ✅ SECURITY FIX: Enhanced security validation for each token
+                if (!isSecureFieldValue(token)) {
+                    printf("CMS: Name contains invalid or potentially dangerous characters.\n");
                     return;
                 }
                 
-                // ✅ SECURITY FIX: Validate token content
-                if (!isValidFieldValue(token)) {
-                    printf("CMS: Name contains invalid characters.\n");
+                // Check the length before concatenating
+                if (strlen(name) + strlen(token) + 1 >= MAX_NAME) {
+                    printf("CMS: Name too long (max %d characters).\n", MAX_NAME - 1);
                     return;
                 }
                 
@@ -544,9 +613,9 @@ void insertRecord(char *input) {
                 return;
             }
             
-            // ✅ SECURITY FIX: Validate field content
-            if (!isValidFieldValue(progStart)) {
-                printf("CMS: Programme contains invalid characters.\n");
+            // ✅ SECURITY FIX: Enhanced security validation
+            if (!isSecureFieldValue(progStart)) {
+                printf("CMS: Programme contains invalid or potentially dangerous characters.\n");
                 return;
             }
             
@@ -571,15 +640,15 @@ void insertRecord(char *input) {
                     break;
                 }
                 
-                // Check the length before concatenating
-                if (strlen(programme) + strlen(token) + 1 >= MAX_PROGRAMME) {
-                    printf("CMS: Programme name too long (max %d characters).\n", MAX_PROGRAMME - 1);
+                // ✅ SECURITY FIX: Enhanced security validation for each token
+                if (!isSecureFieldValue(token)) {
+                    printf("CMS: Programme contains invalid or potentially dangerous characters.\n");
                     return;
                 }
                 
-                // ✅ SECURITY FIX: Validate token content
-                if (!isValidFieldValue(token)) {
-                    printf("CMS: Programme contains invalid characters.\n");
+                // Check the length before concatenating
+                if (strlen(programme) + strlen(token) + 1 >= MAX_PROGRAMME) {
+                    printf("CMS: Programme name too long (max %d characters).\n", MAX_PROGRAMME - 1);
                     return;
                 }
                 
@@ -827,9 +896,9 @@ void updateRecord(char *input) {
             printf("CMS: Name too long (max %d characters).\n", (int)sizeof(rec->Name) - 1);
             return;
         }
-        // ✅ SECURITY FIX: Validate field content
-        if (!isValidFieldValue(value)) {
-            printf("CMS: Name contains invalid characters.\n");
+        // ✅ SECURITY FIX: Enhanced security validation
+        if (!isSecureFieldValue(value)) {
+            printf("CMS: Name contains invalid or potentially dangerous characters.\n");
             return;
         }
         strncpy(rec->Name, value, sizeof(rec->Name) - 1);
@@ -844,9 +913,9 @@ void updateRecord(char *input) {
             printf("CMS: Programme too long (max %d characters).\n", (int)sizeof(rec->Programme) - 1);
             return;
         }
-        // ✅ SECURITY FIX: Validate field content
-        if (!isValidFieldValue(value)) {
-            printf("CMS: Programme contains invalid characters.\n");
+        // ✅ SECURITY FIX: Enhanced security validation
+        if (!isSecureFieldValue(value)) {
+            printf("CMS: Programme contains invalid or potentially dangerous characters.\n");
             return;
         }
         // NEW: Validate programme format (only letters, spaces, hyphens)
