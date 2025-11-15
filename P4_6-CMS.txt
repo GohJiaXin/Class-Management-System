@@ -1,60 +1,54 @@
-Database Name: Sample-CMS
-Authors: Assistant Prof Oran Zane Devilly
-
-Table Name: StudentRecords
-ID	Name		Programme		Mark
-2301234	Joshua Chen	Software Engineering	70.50
-2201234	Isaac Teo	Computer Science	63.40
-2304567	John Levoy	Digital Supply Chain	85.90
-2305678	Amelia Tan	Data Science	88.40
-2306789	Ryan Lim	Software Engineering	74.20
-2307890	Sophia Ng	Cybersecurity	81.55
-2308901	Lucas Goh	Computer Science	69.30
-2309012	Isabella Koh	Business Analytics	92.10
-2310123	Ethan Chua	FinTech	77.65
-2311234	Charlotte Lee	Information Systems	84.25
-2312345	Noah Wong	AI & Robotics	79.80
-2313456	Mia Ong	Digital Supply Chain	73.15
-2314567	Caleb Tan	Cloud Computing	86.70
-2315678	Grace Teh	Network Engineering	68.45
-2316789	Elijah Ho	Software Engineering	71.90
-2317890	Harper Low	Computer Science	83.05
-2318901	Benjamin Yeo	DevOps Engineering	76.30
-2319012	Aria Phua	Data Science	91.60
-2320123	Jayden Quek	Information Technology	65.75
-2321234	Lily Pang	Human-Computer Interaction	82.40
-2322345	Aiden Soh	Cybersecurity	88.95
-2323456	Chloe Toh	Business Analytics	79.10
-2324567	Isaac Yap	Software Engineering	72.35
-2325678	Ellie Neo	Computer Science	85.20
-2326789	Daniel Sim	Applied Mathematics	67.10
-2327890	Mila Chan	Information Systems	90.25
-2328901	Matthew Leow	Game Development	78.60
-2329012	Avery Liew	Digital Supply Chain	71.45
-2330123	Leo Tan	Cloud Computing	87.85
-2331234	Nora Lim	Mechatronics	64.90
-2332345	Julian Goh	Bioinformatics	80.55
-2333456	Scarlett Ng	Business Analytics	73.95
-2334567	Adrian Koh	Software Engineering	83.75
-2335678	Penelope Lee	Computer Science	92.30
-2336789	Xavier Wong	Cybersecurity	66.20
-2337890	Evelyn Ong	Information Systems	75.65
-2338901	Connor Teh	AI & Robotics	89.40
-2339012	Aaliyah Ho	FinTech	77.25
-2340123	Hudson Low	Data Science	84.95
-2341234	Hazel Yeo	Network Engineering	70.10
-2342345	Nathan Phua	Cloud Computing	88.15
-2343456	Layla Quek	Software Engineering	79.35
-2344567	Declan Pang	Information Technology	63.80
-2345678	Victoria Soh	Computer Science	91.05
-2346789	Micah Toh	DevOps Engineering	74.60
-2347890	Natalie Yap	Human-Computer Interaction	82.85
-2348901	Elliot Neo	Digital Supply Chain	69.55
-2349012	Savannah Sim	Business Analytics	86.20
-2350123	Rowan Chan	Cybersecurity	78.25
-2351234	Stella Leow	Data Science	93.40
-2352345	Kai Liew	Software Engineering	72.95
-2353456	Zoey Tan	Information Systems	85.75
-2354567	Theo Lim	Computer Science	80.30
-
+2301234	Joshua Chen	Software Engineering	70.5	B
+2201234	Isaac Teo	Computer Science	63.4	C
+2304567	John Levoy	Digital Supply Chain	85.9	A
+2305678	Amelia Tan	Data Science	88.4	A
+2306789	Ryan Lim	Software Engineering	74.2	B
+2307890	Sophia Ng	Cybersecurity	81.6	B
+2308901	Lucas Goh	Computer Science	69.3	C
+2309012	Isabella Koh	Business Analytics	92.1	A
+2310123	Ethan Chua	FinTech	77.7	B
+2311234	Charlotte Lee	Information Systems	84.2	B
+2312345	Noah Wong	AI & Robotics	79.8	B
+2313456	Mia Ong	Digital Supply Chain	73.2	B
+2314567	Caleb Tan	Cloud Computing	86.7	A
+2315678	Grace Teh	Network Engineering	68.4	C
+2316789	Elijah Ho	Software Engineering	71.9	B
+2317890	Harper Low	Computer Science	83.1	B
+2318901	Benjamin Yeo	DevOps Engineering	76.3	B
+2319012	Aria Phua	Data Science	91.6	A
+2320123	Jayden Quek	Information Technology	65.8	C
+2321234	Lily Pang	Human-Computer Interaction	82.4	B
+2322345	Aiden Soh	Cybersecurity	88.9	A
+2323456	Chloe Toh	Business Analytics	79.1	B
+2324567	Isaac Yap	Software Engineering	72.3	B
+2325678	Ellie Neo	Computer Science	85.2	A
+2326789	Daniel Sim	Applied Mathematics	67.1	C
+2327890	Mila Chan	Information Systems	90.2	A
+2328901	Matthew Leow	Game Development	78.6	B
+2329012	Avery Liew	Digital Supply Chain	71.4	B
+2330123	Leo Tan	Cloud Computing	87.8	A
+2331234	Nora Lim	Mechatronics	64.9	C
+2332345	Julian Goh	Bioinformatics	80.6	B
+2333456	Scarlett Ng	Business Analytics	73.9	B
+2334567	Adrian Koh	Software Engineering	83.8	B
+2335678	Penelope Lee	Computer Science	92.3	A
+2336789	Xavier Wong	Cybersecurity	66.2	C
+2337890	Evelyn Ong	Information Systems	75.7	B
+2338901	Connor Teh	AI & Robotics	89.4	A
+2339012	Aaliyah Ho	FinTech	77.2	B
+2340123	Hudson Low	Data Science	84.9	B
+2341234	Hazel Yeo	Network Engineering	70.1	B
+2342345	Nathan Phua	Cloud Computing	88.2	A
+2343456	Layla Quek	Software Engineering	79.3	B
+2344567	Declan Pang	Information Technology	63.8	C
+2345678	Victoria Soh	Computer Science	91.1	A
+2346789	Micah Toh	DevOps Engineering	74.6	B
+2347890	Natalie Yap	Human-Computer Interaction	82.8	B
+2348901	Elliot Neo	Digital Supply Chain	69.6	C
+2349012	Savannah Sim	Business Analytics	86.2	A
+2350123	Rowan Chan	Cybersecurity	78.2	B
+2351234	Stella Leow	Data Science	93.4	A
+2352345	Kai Liew	Software Engineering	72.9	B
+2353456	Zoey Tan	Information Systems	85.8	A
+2354567	Theo Lim	Computer Science	80.3	B
 
