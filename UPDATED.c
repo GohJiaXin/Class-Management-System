@@ -397,7 +397,7 @@ void queryRecord(char *input) {
 }
 
 
-void updateRecord() {
+void updateRecord(char *input) {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
         return;
