@@ -942,4 +942,3 @@ void toLowerCase(char *str) {
         str[i] = tolower(str[i]);
     }
 }
-
