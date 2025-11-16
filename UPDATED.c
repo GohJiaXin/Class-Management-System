@@ -66,6 +66,10 @@ static int isReasonableString(const char *str);
 static int isAllWhitespace(const char *str);
 static int isValidFieldValue(const char *str);
 
+// NEW: SQL injection prevention functions
+static int containsSQLInjectionPatterns(const char *str);
+static int isSecureFieldValue(const char *str);
+
 int main(void) {
     char input[256];
     char command[256];
@@ -94,6 +98,12 @@ int main(void) {
             continue;
         }
 
+        // ✅ NEW SECURITY FIX: Check for SQL injection in entire command
+        if (containsSQLInjectionPatterns(input)) {
+            printf("CMS: Security warning: Potential injection attempt detected in command.\n");
+            continue;
+        }
+
         trim_newline(input);
 
         // ✅ SECURITY FIX: Validate input length
@@ -113,7 +123,7 @@ int main(void) {
             return 0;
         }
         else if (strcmp(command, "help") == 0) {
-            printf("\nCommands:\n");
+            printf("Commands:\n");
             printf("OPEN\n");
             printf("SHOW ALL\n");
             printf("SHOW ALL SORT BY ID [DESC]\n");
@@ -247,6 +257,65 @@ void promptSaveBeforeExit() {
     } else {
         printf("CMS: Invalid input. Exiting without saving.\n");
     }
+}
+
+// NEW: Security validation to prevent SQL injection patterns
+static int containsSQLInjectionPatterns(const char *str) {
+    if (!str) return 0;
+    
+    char lowerStr[256];
+    strncpy(lowerStr, str, sizeof(lowerStr) - 1);
+    lowerStr[sizeof(lowerStr) - 1] = '\0';
+    toLowerCase(lowerStr);
+    
+    // Common SQL injection keywords and patterns
+    const char *sqlPatterns[] = {
+        "union", "select", "insert", "update", "delete", "drop", "create", 
+        "alter", "exec", "execute", "script", "javascript", "onload", 
+        "onerror", "onclick", "where", "from", "table", "database",
+        "admin", "password", "1=1", "'1'='1", "or 1=1", "and 1=1",
+        "--", "/*", "*/", ";", "\"", "'", "`", "\\"
+    };
+    
+    int patternCount = sizeof(sqlPatterns) / sizeof(sqlPatterns[0]);
+    for (int i = 0; i < patternCount; i++) {
+        if (strstr(lowerStr, sqlPatterns[i]) != NULL) {
+            return 1; // SQL injection pattern detected
+        }
+    }
+    
+    return 0; // No SQL injection patterns found
+}
+
+// NEW: Enhanced field validation with SQL injection detection
+static int isSecureFieldValue(const char *str) {
+    if (!str) return 0;
+    
+    // Check basic validity first
+    if (!isValidFieldValue(str)) {
+        return 0;
+    }
+    
+    // Check for SQL injection patterns
+    if (containsSQLInjectionPatterns(str)) {
+        printf("CMS: Security warning: Potential injection attempt detected.\n");
+        return 0;
+    }
+    
+    // Additional security: limit consecutive special characters
+    int specialCount = 0;
+    for (int i = 0; str[i]; i++) {
+        if (!isalnum((unsigned char)str[i]) && !isspace((unsigned char)str[i])) {
+            specialCount++;
+            if (specialCount > 3) { // Allow some punctuation but not many
+                return 0;
+            }
+        } else {
+            specialCount = 0;
+        }
+    }
+    
+    return 1;
 }
 
 void printDeclaration() {
@@ -422,7 +491,6 @@ void showAll() {
                student_records[i].Mark);
     }
 }
-
 void insertRecord(char *input) {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
@@ -435,9 +503,39 @@ void insertRecord(char *input) {
     float mark = -1.0f;
     int id_set = 0, name_set = 0, programme_set = 0, mark_set = 0;
 
-    // Work on a copy because strtok modifies the string
+    // ✅ SECURITY FIX: Normalize excessive spaces in input
+    char normalizedInput[500];
+    int writePos = 0;
+    int inSpace = 0;
+    
+    for (int i = 0; input[i] && writePos < sizeof(normalizedInput) - 1; i++) {
+        if (isspace((unsigned char)input[i])) {
+            if (!inSpace && writePos > 0) {  // Keep single space, skip leading spaces
+                normalizedInput[writePos++] = ' ';
+                inSpace = 1;
+            }
+        } else {
+            normalizedInput[writePos++] = input[i];
+            inSpace = 0;
+        }
+    }
+    normalizedInput[writePos] = '\0';
+    trim(normalizedInput);  // Remove trailing spaces
+
+    // ✅ Check if normalization resulted in too much reduction (likely spacing attack)
+    int spaceCount = 0;
+    for (int i = 0; input[i]; i++) {
+        if (isspace((unsigned char)input[i])) spaceCount++;
+    }
+    // If more than 30% of original input was spaces, reject it
+    if (strlen(input) > 0 && spaceCount > (int)(strlen(input) * 0.3)) {
+        printf("CMS: Input contains excessive spacing. Please use normal spacing.\n");
+        return;
+    }
+
+    // Work on the normalized copy
     char buffer[500];
-    strncpy(buffer, input, sizeof(buffer) - 1);
+    strncpy(buffer, normalizedInput, sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0';
 
     // Parse the input: INSERT ID=2401234 Name=Michelle Lee Programme=Information Security Mark=73.2
@@ -450,54 +548,68 @@ void insertRecord(char *input) {
         toLowerCase(tokenLower);
 
         if (strncmp(tokenLower, "id=", 3) == 0) {
-            // ✅ SECURITY FIX: Check for duplicate fields
             if (id_set) {
                 printf("CMS: ID field specified multiple times.\n");
                 return;
             }
             id_set = 1;
             
-            if (!parseID(token + 3, &id)) {
+            // ✅ Strip spaces after "ID="
+            char *idValue = token + 3;
+            while (isspace((unsigned char)*idValue)) idValue++;  // Skip leading spaces
+            
+            if (!parseID(idValue, &id)) {
                 printf("CMS: Invalid ID format. ID must be 7 digits starting with 2\n");
                 return;
             }
         }
         else if (strncmp(tokenLower, "mark=", 5) == 0) {
-            // ✅ SECURITY FIX: Check for duplicate fields
             if (mark_set) {
                 printf("CMS: Mark field specified multiple times.\n");
                 return;
             }
             mark_set = 1;
             
-            if (!parseMark(token + 5, &mark)) {
+            // ✅ Strip spaces after "Mark="
+            char *markValue = token + 5;
+            while (isspace((unsigned char)*markValue)) markValue++;  // Skip leading spaces
+            
+            if (!parseMark(markValue, &mark)) {
                 printf("CMS: Invalid mark format. Mark must be a number between 0 and 100.\n");
                 return;
             }
         }
         else if (strncmp(tokenLower, "name=", 5) == 0) {
-            // ✅ SECURITY FIX: Check for duplicate fields
             if (name_set) {
                 printf("CMS: Name field specified multiple times.\n");
                 return;
             }
             name_set = 1;
             
+            // ✅ Strip spaces after "Name="
             char *nameStart = token + 5;
+            while (isspace((unsigned char)*nameStart)) nameStart++;  // Skip leading spaces
+            
+            if (*nameStart == '\0') {
+                printf("CMS: Name cannot be empty.\n");
+                return;
+            }
+            
             // Check initial length:
             if (strlen(nameStart) >= MAX_NAME) {
                 printf("CMS: Name too long (max %d characters).\n", MAX_NAME - 1);
                 return;
             }
             
-            // ✅ SECURITY FIX: Validate field content
-            if (!isValidFieldValue(nameStart)) {
-                printf("CMS: Name contains invalid characters.\n");
+            // ✅ SECURITY FIX: Enhanced security validation
+            if (!isSecureFieldValue(nameStart)) {
+                printf("CMS: Name contains invalid or potentially dangerous characters.\n");
                 return;
             }
             
             strcpy(name, nameStart);
             token = strtok(NULL, " ");
+            
             while (token != NULL) {
                 // Convert next token to lowercase to check if it's a field
                 char nextTokenLower[256];
@@ -511,15 +623,15 @@ void insertRecord(char *input) {
                     break;
                 }
                 
-                // Check the length before concatenating
-                if (strlen(name) + strlen(token) + 1 >= MAX_NAME) {
-                    printf("CMS: Name too long (max %d characters).\n", MAX_NAME - 1);
+                // ✅ SECURITY FIX: Enhanced security validation for each token
+                if (!isSecureFieldValue(token)) {
+                    printf("CMS: Name contains invalid or potentially dangerous characters.\n");
                     return;
                 }
                 
-                // ✅ SECURITY FIX: Validate token content
-                if (!isValidFieldValue(token)) {
-                    printf("CMS: Name contains invalid characters.\n");
+                // Check the length before concatenating
+                if (strlen(name) + strlen(token) + 1 >= MAX_NAME) {
+                    printf("CMS: Name too long (max %d characters).\n", MAX_NAME - 1);
                     return;
                 }
                 
@@ -530,23 +642,30 @@ void insertRecord(char *input) {
             continue;
         }
         else if (strncmp(tokenLower, "programme=", 10) == 0) {
-            // ✅ SECURITY FIX: Check for duplicate fields
             if (programme_set) {
                 printf("CMS: Programme field specified multiple times.\n");
                 return;
             }
             programme_set = 1;
             
+            // ✅ Strip spaces after "Programme="
             char *progStart = token + 10;
+            while (isspace((unsigned char)*progStart)) progStart++;  // Skip leading spaces
+            
+            if (*progStart == '\0') {
+                printf("CMS: Programme cannot be empty.\n");
+                return;
+            }
+            
             // Check initial length for programme
             if (strlen(progStart) >= MAX_PROGRAMME) {
                 printf("CMS: Programme name too long (max %d characters).\n", MAX_PROGRAMME - 1);
                 return;
             }
             
-            // ✅ SECURITY FIX: Validate field content
-            if (!isValidFieldValue(progStart)) {
-                printf("CMS: Programme contains invalid characters.\n");
+            // ✅ SECURITY FIX: Enhanced security validation
+            if (!isSecureFieldValue(progStart)) {
+                printf("CMS: Programme contains invalid or potentially dangerous characters.\n");
                 return;
             }
             
@@ -559,6 +678,7 @@ void insertRecord(char *input) {
             
             strcpy(programme, progStart);
             token = strtok(NULL, " ");
+            
             while (token != NULL) {
                 // Convert next token to lowercase to check if it's a field
                 char nextTokenLower[256];
@@ -571,15 +691,15 @@ void insertRecord(char *input) {
                     break;
                 }
                 
-                // Check the length before concatenating
-                if (strlen(programme) + strlen(token) + 1 >= MAX_PROGRAMME) {
-                    printf("CMS: Programme name too long (max %d characters).\n", MAX_PROGRAMME - 1);
+                // ✅ SECURITY FIX: Enhanced security validation for each token
+                if (!isSecureFieldValue(token)) {
+                    printf("CMS: Programme contains invalid or potentially dangerous characters.\n");
                     return;
                 }
                 
-                // ✅ SECURITY FIX: Validate token content
-                if (!isValidFieldValue(token)) {
-                    printf("CMS: Programme contains invalid characters.\n");
+                // Check the length before concatenating
+                if (strlen(programme) + strlen(token) + 1 >= MAX_PROGRAMME) {
+                    printf("CMS: Programme name too long (max %d characters).\n", MAX_PROGRAMME - 1);
                     return;
                 }
                 
@@ -656,6 +776,7 @@ void insertRecord(char *input) {
 
     printf("CMS: A new record with ID=%d is successfully inserted.\n", id);
 }
+
 
 void queryRecord(char *input) {
     if (!isFileOpen) {
@@ -827,9 +948,9 @@ void updateRecord(char *input) {
             printf("CMS: Name too long (max %d characters).\n", (int)sizeof(rec->Name) - 1);
             return;
         }
-        // ✅ SECURITY FIX: Validate field content
-        if (!isValidFieldValue(value)) {
-            printf("CMS: Name contains invalid characters.\n");
+        // ✅ SECURITY FIX: Enhanced security validation
+        if (!isSecureFieldValue(value)) {
+            printf("CMS: Name contains invalid or potentially dangerous characters.\n");
             return;
         }
         strncpy(rec->Name, value, sizeof(rec->Name) - 1);
@@ -844,9 +965,9 @@ void updateRecord(char *input) {
             printf("CMS: Programme too long (max %d characters).\n", (int)sizeof(rec->Programme) - 1);
             return;
         }
-        // ✅ SECURITY FIX: Validate field content
-        if (!isValidFieldValue(value)) {
-            printf("CMS: Programme contains invalid characters.\n");
+        // ✅ SECURITY FIX: Enhanced security validation
+        if (!isSecureFieldValue(value)) {
+            printf("CMS: Programme contains invalid or potentially dangerous characters.\n");
             return;
         }
         // NEW: Validate programme format (only letters, spaces, hyphens)
