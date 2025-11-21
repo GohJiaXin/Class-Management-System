@@ -70,6 +70,19 @@ static int isValidFieldValue(const char *str);
 static int containsSQLInjectionPatterns(const char *str);
 static int isSecureFieldValue(const char *str);
 
+// NEW: Duplicate record detection
+static int isDuplicateRecord(int id, const char *name, const char *programme, float mark);
+
+// NEW: Enhanced invalid character checking
+static int containsDangerousChars(const char *str);
+
+// NEW: Duplicate field detection
+static int hasDuplicateFields(const char *input);
+
+// NEW: Command injection detection
+static int containsCommandInjectionChars(const char *str);
+static int isValidFieldContent(const char *str);
+
 int main(void) {
     char input[256];
     char command[256];
@@ -92,13 +105,19 @@ int main(void) {
             continue;
         }
         
+        // ✅ SECURITY FIX: Check for command injection in main input
+        if (containsCommandInjectionChars(input)) {
+            printf("CMS: Security warning: Command injection attempt detected.\n");
+            continue;
+        }
+
         // ✅ SECURITY FIX: Check for command injection
         if (strchr(input, ';') != NULL) {
             printf("CMS: Invalid character ';' in command.\n");
             continue;
         }
 
-        // ✅ NEW SECURITY FIX: Check for SQL injection in entire command
+        // ✅ FIXED SECURITY: Safe SQL injection detection
         if (containsSQLInjectionPatterns(input)) {
             printf("CMS: Security warning: Potential injection attempt detected in command.\n");
             continue;
@@ -138,6 +157,7 @@ int main(void) {
             printf("SHOW SUMMARY\n");
             printf("\nNote: ID must be exactly 7 digits starting with '2' (e.g., 2123456)\n");
             printf("Note: Programme must contain only letters, spaces, and hyphens\n");
+            printf("Note: Names and programmes cannot contain / | & # characters\n");
             printf("EXIT\n");
         }
         else if (strcmp(command, "open") == 0) {
@@ -193,6 +213,44 @@ int main(void) {
     }
 
     return 0;
+}
+
+// NEW FUNCTION: Check for command injection characters
+static int containsCommandInjectionChars(const char *str) {
+    if (!str) return 0;
+    
+    const char *dangerous_chars = "|&`$(){}[]<>!";
+    for (int i = 0; str[i]; i++) {
+        if (strchr(dangerous_chars, str[i]) != NULL) {
+            return 1; // Command injection character found
+        }
+    }
+    return 0; // No command injection characters
+}
+
+// NEW FUNCTION: Comprehensive field content validation
+static int isValidFieldContent(const char *str) {
+    if (!str) return 0;
+    
+    // Check for command injection characters
+    if (containsCommandInjectionChars(str)) {
+        printf("CMS: Security warning: Command injection characters detected.\n");
+        return 0;
+    }
+    
+    // Check for other dangerous characters
+    if (containsDangerousChars(str)) {
+        printf("CMS: Invalid characters detected. Cannot contain / | & # characters.\n");
+        return 0;
+    }
+    
+    // Check for SQL injection
+    if (containsSQLInjectionPatterns(str)) {
+        printf("CMS: Security warning: Potential SQL injection detected.\n");
+        return 0;
+    }
+    
+    return 1;
 }
 
 // NEW FUNCTION: Validate programme name (only letters, spaces, and hyphens allowed)
@@ -259,7 +317,88 @@ void promptSaveBeforeExit() {
     }
 }
 
-// NEW: Security validation to prevent SQL injection patterns
+// NEW FUNCTION: Check for duplicate records (all fields)
+static int isDuplicateRecord(int id, const char *name, const char *programme, float mark) {
+    for (int i = 0; i < recordCount; i++) {
+        // Check if all fields match
+        if (student_records[i].ID == id &&
+            strcmp(student_records[i].Name, name) == 0 &&
+            strcmp(student_records[i].Programme, programme) == 0 &&
+            student_records[i].Mark == mark) {
+            return 1; // Exact duplicate found
+        }
+    }
+    return 0; // No duplicate found
+}
+
+// NEW FUNCTION: Check for dangerous characters (/ | & #)
+static int containsDangerousChars(const char *str) {
+    if (!str) return 0;
+    
+    const char *dangerous_chars = "/|&#";
+    for (int i = 0; str[i]; i++) {
+        if (strchr(dangerous_chars, str[i]) != NULL) {
+            return 1; // Dangerous character found
+        }
+    }
+    return 0; // No dangerous characters
+}
+
+// NEW FUNCTION: Check for duplicate fields in input
+static int hasDuplicateFields(const char *input) {
+    if (!input) return 0;
+    
+    char buffer[500];
+    strncpy(buffer, input, sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0';
+    
+    // Convert to lowercase for case-insensitive comparison
+    toLowerCase(buffer);
+    
+    // Count occurrences of each field
+    int id_count = 0, name_count = 0, programme_count = 0, mark_count = 0;
+    
+    char *token = strtok(buffer, " ");
+    while (token != NULL) {
+        // Check if token starts with a field name
+        if (strncmp(token, "id=", 3) == 0) {
+            id_count++;
+        }
+        else if (strncmp(token, "name=", 5) == 0) {
+            name_count++;
+        }
+        else if (strncmp(token, "programme=", 10) == 0) {
+            programme_count++;
+        }
+        else if (strncmp(token, "mark=", 5) == 0) {
+            mark_count++;
+        }
+        
+        token = strtok(NULL, " ");
+    }
+    
+    // Check if any field appears more than once
+    if (id_count > 1) {
+        printf("CMS: Error - Multiple ID fields detected.\n");
+        return 1;
+    }
+    if (name_count > 1) {
+        printf("CMS: Error - Multiple Name fields detected.\n");
+        return 1;
+    }
+    if (programme_count > 1) {
+        printf("CMS: Error - Multiple Programme fields detected.\n");
+        return 1;
+    }
+    if (mark_count > 1) {
+        printf("CMS: Error - Multiple Mark fields detected.\n");
+        return 1;
+    }
+    
+    return 0; // No duplicate fields
+}
+
+// FIXED: Safe SQL injection detection - no false positives
 static int containsSQLInjectionPatterns(const char *str) {
     if (!str) return 0;
     
@@ -268,13 +407,17 @@ static int containsSQLInjectionPatterns(const char *str) {
     lowerStr[sizeof(lowerStr) - 1] = '\0';
     toLowerCase(lowerStr);
     
-    // Common SQL injection keywords and patterns
+    // SAFE: Only check for actual dangerous SQL patterns
     const char *sqlPatterns[] = {
-        "union", "select", "insert", "update", "delete", "drop", "create", 
-        "alter", "exec", "execute", "script", "javascript", "onload", 
-        "onerror", "onclick", "where", "from", "table", "database",
-        "admin", "password", "1=1", "'1'='1", "or 1=1", "and 1=1",
-        "--", "/*", "*/", ";", "\"", "'", "`", "\\"
+        // SQL comment syntax (definitely dangerous)
+        "--", "/*", "*/",
+        // Command separators
+        ";",
+        // Actual SQL commands with spaces to avoid false positives
+        " union ", " select ", " drop ", " create ", " alter ",
+        " insert ", " update ", " delete ", " exec ", " execute ",
+        // Dangerous SQL patterns with spaces
+        " 1=1", "1=1 ", "'1'='1"
     };
     
     int patternCount = sizeof(sqlPatterns) / sizeof(sqlPatterns[0]);
@@ -287,7 +430,7 @@ static int containsSQLInjectionPatterns(const char *str) {
     return 0; // No SQL injection patterns found
 }
 
-// NEW: Enhanced field validation with SQL injection detection
+// NEW: Enhanced field validation with SQL injection detection and invalid character check
 static int isSecureFieldValue(const char *str) {
     if (!str) return 0;
     
@@ -299,6 +442,18 @@ static int isSecureFieldValue(const char *str) {
     // Check for SQL injection patterns
     if (containsSQLInjectionPatterns(str)) {
         printf("CMS: Security warning: Potential injection attempt detected.\n");
+        return 0;
+    }
+    
+    // NEW: Check for invalid characters / | & #
+    if (containsDangerousChars(str)) {
+        printf("CMS: Invalid characters detected. Cannot contain / | & # characters.\n");
+        return 0;
+    }
+    
+    // NEW: Check for command injection characters
+    if (containsCommandInjectionChars(str)) {
+        printf("CMS: Security warning: Command injection characters detected.\n");
         return 0;
     }
     
@@ -414,6 +569,26 @@ void openDatabase() {
                 continue;
             }
             
+            // NEW: Check for invalid characters in name and programme
+            if (containsDangerousChars(name)) {
+                printf("CMS: Warning - Line %d: Name contains invalid characters / | & # (ID=%d), skipping.\n", lineNum, id);
+                continue;
+            }
+            if (containsDangerousChars(programme)) {
+                printf("CMS: Warning - Line %d: Programme contains invalid characters / | & # (ID=%d), skipping.\n", lineNum, id);
+                continue;
+            }
+            
+            // NEW: Check for command injection characters
+            if (containsCommandInjectionChars(name)) {
+                printf("CMS: Warning - Line %d: Name contains command injection characters (ID=%d), skipping.\n", lineNum, id);
+                continue;
+            }
+            if (containsCommandInjectionChars(programme)) {
+                printf("CMS: Warning - Line %d: Programme contains command injection characters (ID=%d), skipping.\n", lineNum, id);
+                continue;
+            }
+            
             student_records[recordCount].ID = id;
             strcpy(student_records[recordCount].Name, name);
             strcpy(student_records[recordCount].Programme, programme);
@@ -446,6 +621,26 @@ void openDatabase() {
             }
             if (idExists(id)) {
                 printf("CMS: Warning - Line %d: Duplicate ID %d, skipping.\n", lineNum, id);
+                continue;
+            }
+            
+            // NEW: Check for invalid characters in name and programme
+            if (containsDangerousChars(name)) {
+                printf("CMS: Warning - Line %d: Name contains invalid characters / | & # (ID=%d), skipping.\n", lineNum, id);
+                continue;
+            }
+            if (containsDangerousChars(programme)) {
+                printf("CMS: Warning - Line %d: Programme contains invalid characters / | & # (ID=%d), skipping.\n", lineNum, id);
+                continue;
+            }
+            
+            // NEW: Check for command injection characters
+            if (containsCommandInjectionChars(name)) {
+                printf("CMS: Warning - Line %d: Name contains command injection characters (ID=%d), skipping.\n", lineNum, id);
+                continue;
+            }
+            if (containsCommandInjectionChars(programme)) {
+                printf("CMS: Warning - Line %d: Programme contains command injection characters (ID=%d), skipping.\n", lineNum, id);
                 continue;
             }
             
@@ -491,9 +686,21 @@ void showAll() {
                student_records[i].Mark);
     }
 }
+
 void insertRecord(char *input) {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
+        return;
+    }
+
+    // ✅ NEW: Check for command injection in the entire input first
+    if (containsCommandInjectionChars(input)) {
+        printf("CMS: Security warning: Command injection attempt detected in input.\n");
+        return;
+    }
+
+    // ✅ NEW: Check for duplicate fields first
+    if (hasDuplicateFields(input)) {
         return;
     }
 
@@ -501,222 +708,197 @@ void insertRecord(char *input) {
     char name[MAX_NAME] = "";
     char programme[MAX_PROGRAMME] = "";
     float mark = -1.0f;
-    int id_set = 0, name_set = 0, programme_set = 0, mark_set = 0;
 
-    // ✅ SECURITY FIX: Normalize excessive spaces in input
-    char normalizedInput[500];
-    int writePos = 0;
-    int inSpace = 0;
-    
-    for (int i = 0; input[i] && writePos < sizeof(normalizedInput) - 1; i++) {
-        if (isspace((unsigned char)input[i])) {
-            if (!inSpace && writePos > 0) {  // Keep single space, skip leading spaces
-                normalizedInput[writePos++] = ' ';
-                inSpace = 1;
-            }
-        } else {
-            normalizedInput[writePos++] = input[i];
-            inSpace = 0;
-        }
-    }
-    normalizedInput[writePos] = '\0';
-    trim(normalizedInput);  // Remove trailing spaces
-
-    // ✅ Check if normalization resulted in too much reduction (likely spacing attack)
-    int spaceCount = 0;
-    for (int i = 0; input[i]; i++) {
-        if (isspace((unsigned char)input[i])) spaceCount++;
-    }
-    // If more than 30% of original input was spaces, reject it
-    if (strlen(input) > 0 && spaceCount > (int)(strlen(input) * 0.3)) {
-        printf("CMS: Input contains excessive spacing. Please use normal spacing.\n");
-        return;
-    }
-
-    // Work on the normalized copy
+    // Work with original input to preserve spacing
     char buffer[500];
-    strncpy(buffer, normalizedInput, sizeof(buffer) - 1);
+    strncpy(buffer, input, sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0';
 
-    // Parse the input: INSERT ID=2401234 Name=Michelle Lee Programme=Information Security Mark=73.2
-    char *token = strtok(buffer, " ");
-    while (token != NULL) {
-        // Convert token to lowercase for case-insensitive comparison
-        char tokenLower[256];
-        strncpy(tokenLower, token, sizeof(tokenLower) - 1);
-        tokenLower[sizeof(tokenLower) - 1] = '\0';
-        toLowerCase(tokenLower);
+    // Skip "INSERT" keyword (case-insensitive)
+    char *parseStart = buffer;
+    char bufferLower[500];
+    strncpy(bufferLower, buffer, sizeof(bufferLower) - 1);
+    bufferLower[sizeof(bufferLower) - 1] = '\0';
+    toLowerCase(bufferLower);
+    
+    if (strncmp(bufferLower, "insert ", 7) == 0) {
+        parseStart = buffer + 7;
+        // Skip spaces after INSERT
+        while (*parseStart == ' ') parseStart++;
+    }
 
-        if (strncmp(tokenLower, "id=", 3) == 0) {
-            if (id_set) {
-                printf("CMS: ID field specified multiple times.\n");
-                return;
-            }
-            id_set = 1;
-            
-            // ✅ Strip spaces after "ID="
-            char *idValue = token + 3;
-            while (isspace((unsigned char)*idValue)) idValue++;  // Skip leading spaces
-            
-            if (!parseID(idValue, &id)) {
-                printf("CMS: Invalid ID format. ID must be 7 digits starting with 2\n");
-                return;
-            }
+    // ✅ NEW: Enhanced parsing with command injection checks
+    
+    // Find ID=
+    char *idPos = strstr(parseStart, "ID=");
+    if (!idPos) idPos = strstr(parseStart, "id=");
+    if (!idPos) idPos = strstr(parseStart, "Id=");
+    
+    if (idPos) {
+        char *idValue = idPos + 3;
+        char idStr[20] = "";
+        int i = 0;
+        // Read until space or end
+        while (idValue[i] && !isspace((unsigned char)idValue[i]) && i < 19) {
+            idStr[i] = idValue[i];
+            i++;
         }
-        else if (strncmp(tokenLower, "mark=", 5) == 0) {
-            if (mark_set) {
-                printf("CMS: Mark field specified multiple times.\n");
-                return;
-            }
-            mark_set = 1;
-            
-            // ✅ Strip spaces after "Mark="
-            char *markValue = token + 5;
-            while (isspace((unsigned char)*markValue)) markValue++;  // Skip leading spaces
-            
-            if (!parseMark(markValue, &mark)) {
-                printf("CMS: Invalid mark format. Mark must be a number between 0 and 100.\n");
-                return;
-            }
+        idStr[i] = '\0';
+        
+        // ✅ NEW: Check ID for command injection
+        if (containsCommandInjectionChars(idStr)) {
+            printf("CMS: Security warning: Command injection attempt detected in ID field.\n");
+            return;
         }
-        else if (strncmp(tokenLower, "name=", 5) == 0) {
-            if (name_set) {
-                printf("CMS: Name field specified multiple times.\n");
+        
+        if (!parseID(idStr, &id)) {
+            printf("CMS: Invalid ID format. ID must be 7 digits starting with 2\n");
+            return;
+        }
+    }
+
+    // Find Name=
+    char *namePos = strstr(parseStart, "Name=");
+    if (!namePos) namePos = strstr(parseStart, "name=");
+    if (!namePos) namePos = strstr(parseStart, "NAME=");
+    
+    if (namePos) {
+        char *nameStart = namePos + 5;
+        
+        // Find where Name ends - look for the next field (Programme= or Mark=)
+        char *progPos = strstr(nameStart, "Programme=");
+        if (!progPos) progPos = strstr(nameStart, "programme=");
+        if (!progPos) progPos = strstr(nameStart, "PROGRAMME=");
+        
+        char *markPos = strstr(nameStart, "Mark=");
+        if (!markPos) markPos = strstr(nameStart, "mark=");
+        if (!markPos) markPos = strstr(nameStart, "MARK=");
+        
+        // Use whichever comes first
+        char *nameEnd = progPos;
+        if (!nameEnd || (markPos && markPos < nameEnd)) {
+            nameEnd = markPos;
+        }
+        
+        if (nameEnd) {
+            // Copy name from nameStart to nameEnd
+            int len = nameEnd - nameStart;
+            if (len >= MAX_NAME) {
+                printf("CMS: Name too long (max %d characters).\n", MAX_NAME - 1);
                 return;
             }
-            name_set = 1;
+            strncpy(name, nameStart, len);
+            name[len] = '\0';
             
-            // ✅ Strip spaces after "Name="
-            char *nameStart = token + 5;
-            while (isspace((unsigned char)*nameStart)) nameStart++;  // Skip leading spaces
+            // Trim trailing spaces
+            trim(name);
             
-            if (*nameStart == '\0') {
+            if (strlen(name) == 0 || isAllWhitespace(name)) {
                 printf("CMS: Name cannot be empty.\n");
                 return;
             }
             
-            // Check initial length:
-            if (strlen(nameStart) >= MAX_NAME) {
-                printf("CMS: Name too long (max %d characters).\n", MAX_NAME - 1);
+            // ✅ FIXED: Check for dangerous characters in Name
+            if (containsDangerousChars(name)) {
+                printf("CMS: Name contains invalid characters. Cannot contain / | & # characters.\n");
                 return;
             }
             
-            // ✅ SECURITY FIX: Enhanced security validation
-            if (!isSecureFieldValue(nameStart)) {
+            // ✅ NEW: Check for command injection in Name
+            if (containsCommandInjectionChars(name)) {
+                printf("CMS: Security warning: Command injection attempt detected in Name field.\n");
+                return;
+            }
+            
+            if (!isSecureFieldValue(name)) {
                 printf("CMS: Name contains invalid or potentially dangerous characters.\n");
                 return;
             }
-            
-            strcpy(name, nameStart);
-            token = strtok(NULL, " ");
-            
-            while (token != NULL) {
-                // Convert next token to lowercase to check if it's a field
-                char nextTokenLower[256];
-                strncpy(nextTokenLower, token, sizeof(nextTokenLower) - 1);
-                nextTokenLower[sizeof(nextTokenLower) - 1] = '\0';
-                toLowerCase(nextTokenLower);
-                
-                // Stop if we encounter the next field
-                if (strncmp(nextTokenLower, "programme=", 10) == 0 || 
-                    strncmp(nextTokenLower, "mark=", 5) == 0) {
-                    break;
-                }
-                
-                // ✅ SECURITY FIX: Enhanced security validation for each token
-                if (!isSecureFieldValue(token)) {
-                    printf("CMS: Name contains invalid or potentially dangerous characters.\n");
-                    return;
-                }
-                
-                // Check the length before concatenating
-                if (strlen(name) + strlen(token) + 1 >= MAX_NAME) {
-                    printf("CMS: Name too long (max %d characters).\n", MAX_NAME - 1);
-                    return;
-                }
-                
-                strcat(name, " ");
-                strcat(name, token);
-                token = strtok(NULL, " ");
-            }
-            continue;
         }
-        else if (strncmp(tokenLower, "programme=", 10) == 0) {
-            if (programme_set) {
-                printf("CMS: Programme field specified multiple times.\n");
+    }
+
+    // Find Programme=
+    char *progPos = strstr(parseStart, "Programme=");
+    if (!progPos) progPos = strstr(parseStart, "programme=");
+    if (!progPos) progPos = strstr(parseStart, "PROGRAMME=");
+    
+    if (progPos) {
+        char *progStart = progPos + 10;
+        
+        // Find where Programme ends - look for Mark=
+        char *markPos = strstr(progStart, "Mark=");
+        if (!markPos) markPos = strstr(progStart, "mark=");
+        if (!markPos) markPos = strstr(progStart, "MARK=");
+        
+        if (markPos) {
+            // Copy programme from progStart to markPos
+            int len = markPos - progStart;
+            if (len >= MAX_PROGRAMME) {
+                printf("CMS: Programme name too long (max %d characters).\n", MAX_PROGRAMME - 1);
                 return;
             }
-            programme_set = 1;
+            strncpy(programme, progStart, len);
+            programme[len] = '\0';
             
-            // ✅ Strip spaces after "Programme="
-            char *progStart = token + 10;
-            while (isspace((unsigned char)*progStart)) progStart++;  // Skip leading spaces
+            // Trim trailing spaces
+            trim(programme);
             
-            if (*progStart == '\0') {
+            if (strlen(programme) == 0 || isAllWhitespace(programme)) {
                 printf("CMS: Programme cannot be empty.\n");
                 return;
             }
             
-            // Check initial length for programme
-            if (strlen(progStart) >= MAX_PROGRAMME) {
-                printf("CMS: Programme name too long (max %d characters).\n", MAX_PROGRAMME - 1);
+            // ✅ FIXED: Check for dangerous characters in Programme
+            if (containsDangerousChars(programme)) {
+                printf("CMS: Programme contains invalid characters. Cannot contain / | & # characters.\n");
                 return;
             }
             
-            // ✅ SECURITY FIX: Enhanced security validation
-            if (!isSecureFieldValue(progStart)) {
+            // ✅ NEW: Check for command injection in Programme
+            if (containsCommandInjectionChars(programme)) {
+                printf("CMS: Security warning: Command injection attempt detected in Programme field.\n");
+                return;
+            }
+            
+            if (!isSecureFieldValue(programme)) {
                 printf("CMS: Programme contains invalid or potentially dangerous characters.\n");
                 return;
             }
             
-            // NEW: Validate programme format (only letters, spaces, hyphens)
-            if (!isValidProgramme(progStart)) {
+            if (!isValidProgramme(programme)) {
                 printf("CMS: Invalid programme format. Programme must contain only letters, spaces, and hyphens.\n");
                 printf("CMS: Examples: 'Computer Science', 'Software-Engineering', 'Information Technology'\n");
                 return;
             }
-            
-            strcpy(programme, progStart);
-            token = strtok(NULL, " ");
-            
-            while (token != NULL) {
-                // Convert next token to lowercase to check if it's a field
-                char nextTokenLower[256];
-                strncpy(nextTokenLower, token, sizeof(nextTokenLower) - 1);
-                nextTokenLower[sizeof(nextTokenLower) - 1] = '\0';
-                toLowerCase(nextTokenLower);
-                
-                // Stop if we encounter the next field
-                if (strncmp(nextTokenLower, "mark=", 5) == 0) {
-                    break;
-                }
-                
-                // ✅ SECURITY FIX: Enhanced security validation for each token
-                if (!isSecureFieldValue(token)) {
-                    printf("CMS: Programme contains invalid or potentially dangerous characters.\n");
-                    return;
-                }
-                
-                // Check the length before concatenating
-                if (strlen(programme) + strlen(token) + 1 >= MAX_PROGRAMME) {
-                    printf("CMS: Programme name too long (max %d characters).\n", MAX_PROGRAMME - 1);
-                    return;
-                }
-                
-                // NEW: Validate each token for programme format
-                if (!isValidProgramme(token)) {
-                    printf("CMS: Invalid programme format. Programme must contain only letters, spaces, and hyphens.\n");
-                    return;
-                }
-                
-                strcat(programme, " ");
-                strcat(programme, token);
-                token = strtok(NULL, " ");
-            }
-            continue;
         }
+    }
 
-        token = strtok(NULL, " ");
+    // Find Mark=
+    char *markPos = strstr(parseStart, "Mark=");
+    if (!markPos) markPos = strstr(parseStart, "mark=");
+    if (!markPos) markPos = strstr(parseStart, "MARK=");
+    
+    if (markPos) {
+        char *markValue = markPos + 5;
+        char markStr[20] = "";
+        int i = 0;
+        // Read until space or end
+        while (markValue[i] && !isspace((unsigned char)markValue[i]) && i < 19) {
+            markStr[i] = markValue[i];
+            i++;
+        }
+        markStr[i] = '\0';
+        
+        // ✅ NEW: Check Mark for command injection
+        if (containsCommandInjectionChars(markStr)) {
+            printf("CMS: Security warning: Command injection attempt detected in Mark field.\n");
+            return;
+        }
+        
+        if (!parseMark(markStr, &mark)) {
+            printf("CMS: Invalid mark format. Mark must be a number between 0 and 100.\n");
+            return;
+        }
     }
 
     // Check if only ID is provided (to check existence)
@@ -735,25 +917,14 @@ void insertRecord(char *input) {
         return;
     }
 
-    // ✅ SECURITY FIX: Check for empty/whitespace-only fields
-    if (isAllWhitespace(name)) {
-        printf("CMS: Name cannot be empty or only spaces.\n");
-        return;
-    }
-    if (isAllWhitespace(programme)) {
-        printf("CMS: Programme cannot be empty or only spaces.\n");
-        return;
-    }
-
-    // NEW: Final validation of programme format
-    if (!isValidProgramme(programme)) {
-        printf("CMS: Invalid programme format. Programme must contain only letters, spaces, and hyphens.\n");
-        printf("CMS: Examples: 'Computer Science', 'Software-Engineering', 'Information Technology'\n");
-        return;
-    }
-
     if (idExists(id)) {
         printf("CMS: The record with ID=%d already exists.\n", id);
+        return;
+    }
+
+    // NEW: Check for duplicate record (all fields match)
+    if (isDuplicateRecord(id, name, programme, mark)) {
+        printf("CMS: Error - Duplicate record detected. A record with the same ID, Name, Programme, and Mark already exists.\n");
         return;
     }
 
@@ -777,10 +948,22 @@ void insertRecord(char *input) {
     printf("CMS: A new record with ID=%d is successfully inserted.\n", id);
 }
 
+// ... (rest of the functions remain the same as previous version)
 
 void queryRecord(char *input) {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
+        return;
+    }
+
+    // ✅ NEW: Check for command injection in QUERY
+    if (containsCommandInjectionChars(input)) {
+        printf("CMS: Security warning: Command injection attempt detected in query.\n");
+        return;
+    }
+
+    // ✅ NEW: Check for duplicate fields in QUERY
+    if (hasDuplicateFields(input)) {
         return;
     }
 
@@ -835,6 +1018,17 @@ void queryRecord(char *input) {
 void updateRecord(char *input) {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
+        return;
+    }
+
+    // ✅ NEW: Check for command injection in UPDATE
+    if (containsCommandInjectionChars(input)) {
+        printf("CMS: Security warning: Command injection attempt detected in update.\n");
+        return;
+    }
+
+    // ✅ NEW: Check for duplicate fields in UPDATE
+    if (hasDuplicateFields(input)) {
         return;
     }
 
@@ -937,6 +1131,12 @@ void updateRecord(char *input) {
     trim(field);
     trim(value);
 
+    // ✅ NEW: Check for command injection in field value
+    if (containsCommandInjectionChars(value)) {
+        printf("CMS: Security warning: Command injection attempt detected in field value.\n");
+        return;
+    }
+
     StudentRecords *rec = &student_records[index];
 
     if (strcmp(field, "name") == 0) {
@@ -948,6 +1148,13 @@ void updateRecord(char *input) {
             printf("CMS: Name too long (max %d characters).\n", (int)sizeof(rec->Name) - 1);
             return;
         }
+        
+        // ✅ FIXED: Check for dangerous characters in Name
+        if (containsDangerousChars(value)) {
+            printf("CMS: Name contains invalid characters. Cannot contain / | & # characters.\n");
+            return;
+        }
+        
         // ✅ SECURITY FIX: Enhanced security validation
         if (!isSecureFieldValue(value)) {
             printf("CMS: Name contains invalid or potentially dangerous characters.\n");
@@ -965,6 +1172,13 @@ void updateRecord(char *input) {
             printf("CMS: Programme too long (max %d characters).\n", (int)sizeof(rec->Programme) - 1);
             return;
         }
+        
+        // ✅ FIXED: Check for dangerous characters in Programme
+        if (containsDangerousChars(value)) {
+            printf("CMS: Programme contains invalid characters. Cannot contain / | & # characters.\n");
+            return;
+        }
+        
         // ✅ SECURITY FIX: Enhanced security validation
         if (!isSecureFieldValue(value)) {
             printf("CMS: Programme contains invalid or potentially dangerous characters.\n");
@@ -1000,6 +1214,17 @@ void updateRecord(char *input) {
 void deleteRecord(char *input) {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
+        return;
+    }
+
+    // ✅ NEW: Check for command injection in DELETE
+    if (containsCommandInjectionChars(input)) {
+        printf("CMS: Security warning: Command injection attempt detected in delete.\n");
+        return;
+    }
+
+    // ✅ NEW: Check for duplicate fields in DELETE
+    if (hasDuplicateFields(input)) {
         return;
     }
 
