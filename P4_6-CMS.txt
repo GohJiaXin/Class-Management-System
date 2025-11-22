@@ -8,7 +8,7 @@
 2309012	Isabella Koh	Business Analytics	92.1	A
 2310123	Ethan Chua	FinTech	77.7	B
 2311234	Charlotte Lee	Information Systems	84.2	B
-2312345	Noah Wong	AI & Robotics	79.8	B
+2312345	Noah Wong	AI and Robotics	79.8	B
 2313456	Mia Ong	Digital Supply Chain	73.2	B
 2314567	Caleb Tan	Cloud Computing	86.7	A
 2315678	Grace Teh	Network Engineering	68.4	C
@@ -51,4 +51,3 @@
 2352345	Kai Liew	Software Engineering	72.9	B
 2353456	Zoey Tan	Information Systems	85.8	A
 2354567	Theo Lim	Computer Science	80.3	B
-
