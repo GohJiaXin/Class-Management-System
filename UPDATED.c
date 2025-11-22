@@ -145,8 +145,8 @@ int main(void) {
             printf("Commands:\n");
             printf("OPEN\n");
             printf("SHOW ALL\n");
-            printf("SHOW ALL SORT BY ID [DESC]\n");
-            printf("SHOW ALL SORT BY MARK [DESC]\n");
+            printf("SHOW ALL SORT BY ID [ASCD/DESC]\n");
+            printf("SHOW ALL SORT BY MARK [ASCD/DESC]\n");
             printf("SHOW ALL FILTER BY PROGRAMME\n");
             printf("SHOW ALL FILTER BY MARK\n");
             printf("INSERT ID=.. Name=.. Programme=.. Mark=..\n");
@@ -167,21 +167,29 @@ int main(void) {
             showAll();
         }
         else if (strncmp(command, "show all sort by id", 19) == 0) {
-            if (strstr(command, "desc") != NULL) {
-                sortByID(0);  // descending
-            } else {
-                sortByID(1);  // ascending
-            }
-            showAll();
+        if (strcasestr(command, "desc") != NULL)
+            sortByID(0); // descending
+        else if (strcasestr(command, "ascd") != NULL)
+            sortByID(1); // ascending
+        else {
+            printf("CMS Please specify sort order: 'ascd' or 'desc'.\n");
+            continue;
         }
+        showAll();
+    }
+
         else if (strncmp(command, "show all sort by mark", 21) == 0) {
-            if (strstr(command, "desc") != NULL) {
-                sortByMark(0);  // descending
-            } else {
-                sortByMark(1);  // ascending
-            }
-            showAll();
+        if (strcasestr(command, "desc") != NULL)
+            sortByMark(0); // descending
+        else if (strcasestr(command, "ascd") != NULL)
+            sortByMark(1); // ascending
+        else {
+            printf("CMS Please specify sort order: 'ascd' or 'desc'.\n");
+            continue;
         }
+        showAll();
+    }
+
         else if (strcmp(command, "show all filter by programme") == 0) {
             filterByProgramme();
         }
