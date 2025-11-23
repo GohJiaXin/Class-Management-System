@@ -155,10 +155,10 @@ int main(void) {
             printf("DELETE ID=..\n");
             printf("SAVE\n");
             printf("SHOW SUMMARY\n");
+            printf("EXIT\n");
             printf("\nNote: ID must be exactly 7 digits starting with '2' (e.g., 2123456)\n");
             printf("Note: Programme must contain only letters, spaces, and hyphens\n");
             printf("Note: Names and programmes cannot contain / | & # characters\n");
-            printf("EXIT\n");
         }
         else if (strcmp(command, "open") == 0) {
             openDatabase();
