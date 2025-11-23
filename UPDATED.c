@@ -168,9 +168,9 @@ int main(void) {
             showAll();
         }
         else if (strncmp(command, "show all sort by id", 19) == 0) {
-        if (strcasestr(command, "desc") != NULL)
+        if (strstr(command, "desc") != NULL)
             sortByID(0); // descending
-        else if (strcasestr(command, "ascd") != NULL)
+        else if (strstr(command, "ascd") != NULL)
             sortByID(1); // ascending
         else {
             printf("CMS Please specify sort order: 'ascd' or 'desc'.\n");
@@ -180,9 +180,9 @@ int main(void) {
     }
 
         else if (strncmp(command, "show all sort by mark", 21) == 0) {
-        if (strcasestr(command, "desc") != NULL)
+        if (strstr(command, "desc") != NULL)
             sortByMark(0); // descending
-        else if (strcasestr(command, "ascd") != NULL)
+        else if (strstr(command, "ascd") != NULL)
             sortByMark(1); // ascending
         else {
             printf("CMS Please specify sort order: 'ascd' or 'desc'.\n");
@@ -1023,7 +1023,6 @@ void queryRecord(char *input) {
            student_records[index].Programme,
            student_records[index].Mark);
 }
-
 void updateRecord(char *input) {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
@@ -1036,40 +1035,63 @@ void updateRecord(char *input) {
         return;
     }
 
-    // ✅ NEW: Check for duplicate fields in UPDATE
+    // Check for duplicate fields in UPDATE
     if (hasDuplicateFields(input)) {
         return;
     }
 
     int id = -1;
+    char name[MAX_NAME] = "";
+    char programme[MAX_PROGRAMME] = "";
+    float mark = -1.0f;
+    int has_name = 0, has_programme = 0, has_mark = 0;
 
-    // Work on a copy because strtok modifies the string
-    char buffer[256];
+    // Work with original input to preserve spacing
+    char buffer[500];
     strncpy(buffer, input, sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0';
 
-    // Parse: UPDATE ID=2401234
-    char *token = strtok(buffer, " ");
-    while (token != NULL) {
-        // Convert token to lowercase for case-insensitive comparison
-        char tokenLower[256];
-        strncpy(tokenLower, token, sizeof(tokenLower) - 1);
-        tokenLower[sizeof(tokenLower) - 1] = '\0';
-        toLowerCase(tokenLower);
+    // Skip "UPDATE" keyword (case-insensitive)
+    char *parseStart = buffer;
+    char bufferLower[500];
+    strncpy(bufferLower, buffer, sizeof(bufferLower) - 1);
+    bufferLower[sizeof(bufferLower) - 1] = '\0';
+    toLowerCase(bufferLower);
+    
+    if (strncmp(bufferLower, "update ", 7) == 0) {
+        parseStart = buffer + 7;
+        // Skip spaces after UPDATE
+        while (*parseStart == ' ') parseStart++;
+    }
 
-        if (strncmp(tokenLower, "id=", 3) == 0) {
-            // Check for the ID format - use original token to preserve case for parsing
-            if (!parseID(token + 3, &id)) {
-                printf("CMS: Invalid ID format. ID must be exactly 7 digits starting with '2' (e.g., 2123456).\n");
-                return;
-            }
-            break;
+    // Find ID=
+    char *idPos = strstr(parseStart, "ID=");
+    if (!idPos) idPos = strstr(parseStart, "id=");
+    if (!idPos) idPos = strstr(parseStart, "Id=");
+    
+    if (idPos) {
+        char *idValue = idPos + 3;
+        char idStr[20] = "";
+        int i = 0;
+        while (idValue[i] && !isspace((unsigned char)idValue[i]) && i < 19) {
+            idStr[i] = idValue[i];
+            i++;
         }
-        token = strtok(NULL, " ");
+        idStr[i] = '\0';
+        
+        if (containsCommandInjectionChars(idStr)) {
+            printf("CMS: Security warning: Command injection attempt detected in ID field.\n");
+            return;
+        }
+        
+        if (!parseID(idStr, &id)) {
+            printf("CMS: Invalid ID format. ID must be 7 digits starting with 2\n");
+            return;
+        }
     }
 
     if (id == -1) {
-        printf("CMS: Invalid input. Please provide ID in format: UPDATE ID=xxxxxxx\n");
+        printf("CMS: Invalid input. Please provide ID in format: UPDATE ID=xxxxxxx field=value\n");
         return;
     }
 
@@ -1080,146 +1102,181 @@ void updateRecord(char *input) {
         return;
     }
 
-    // Now parse the field and value from the original input
-    char field[50] = "";
-    char value[100] = "";
+    // Find Name=
+    char *namePos = strstr(parseStart, "Name=");
+    if (!namePos) namePos = strstr(parseStart, "name=");
+    if (!namePos) namePos = strstr(parseStart, "NAME=");
     
-    // Find the position after "ID=xxxxxxx"
-    char *idPos = strstr(input, "ID=");
-    if (!idPos) {
-        // Try lowercase
-        idPos = strstr(input, "id=");
-    }
-    if (!idPos) {
-        idPos = strstr(input, "Id=");
-    }
-    
-    if (idPos) {
-        // Move past the ID part (ID= + 7 digits)
-        char *fieldStart = idPos + 3 + 7; // "ID=" + 7 digits
+    if (namePos) {
+        char *nameStart = namePos + 5;
         
-        // Skip any spaces
-        while (*fieldStart == ' ') fieldStart++;
+        // Find where Name ends
+        char *progPos = strstr(nameStart, "Programme=");
+        if (!progPos) progPos = strstr(nameStart, "programme=");
+        if (!progPos) progPos = strstr(nameStart, "PROGRAMME=");
         
-        if (*fieldStart != '\0') {
-            // Parse field=value
-            char temp[256];
-            strncpy(temp, fieldStart, sizeof(temp) - 1);
-            temp[sizeof(temp) - 1] = '\0';
-            
-            char *equals = strchr(temp, '=');
-            if (equals) {
-                *equals = '\0';
-                strncpy(field, temp, sizeof(field) - 1);
-                field[sizeof(field) - 1] = '\0';
-                
-                char *valueStart = equals + 1;
-                // Skip spaces after equals
-                while (*valueStart == ' ') valueStart++;
-                
-                strncpy(value, valueStart, sizeof(value) - 1);
-                value[sizeof(value) - 1] = '\0';
+        char *markPos = strstr(nameStart, "Mark=");
+        if (!markPos) markPos = strstr(nameStart, "mark=");
+        if (!markPos) markPos = strstr(nameStart, "MARK=");
+        
+        char *nameEnd = progPos;
+        if (!nameEnd || (markPos && markPos < nameEnd)) {
+            nameEnd = markPos;
+        }
+        
+        if (nameEnd) {
+            int len = nameEnd - nameStart;
+            if (len >= MAX_NAME) {
+                printf("CMS: Name too long (max %d characters).\n", MAX_NAME - 1);
+                return;
             }
+            strncpy(name, nameStart, len);
+            name[len] = '\0';
+            trim(name);
+            has_name = 1;
+        } else {
+            // Name is at the end
+            strncpy(name, nameStart, sizeof(name) - 1);
+            name[sizeof(name) - 1] = '\0';
+            trim(name);
+            has_name = 1;
         }
     }
 
-    // If no field=value was found, show error
-    if (strlen(field) == 0 || strlen(value) == 0) {
+    // Find Programme=
+    char *progPos = strstr(parseStart, "Programme=");
+    if (!progPos) progPos = strstr(parseStart, "programme=");
+    if (!progPos) progPos = strstr(parseStart, "PROGRAMME=");
+    
+    if (progPos) {
+        char *progStart = progPos + 10;
+        
+        char *markPos = strstr(progStart, "Mark=");
+        if (!markPos) markPos = strstr(progStart, "mark=");
+        if (!markPos) markPos = strstr(progStart, "MARK=");
+        
+        char *namePos2 = strstr(progStart, "Name=");
+        if (!namePos2) namePos2 = strstr(progStart, "name=");
+        if (!namePos2) namePos2 = strstr(progStart, "NAME=");
+        
+        char *progEnd = markPos;
+        if (!progEnd || (namePos2 && namePos2 < progEnd)) {
+            progEnd = namePos2;
+        }
+        
+        if (progEnd) {
+            int len = progEnd - progStart;
+            if (len >= MAX_PROGRAMME) {
+                printf("CMS: Programme name too long (max %d characters).\n", MAX_PROGRAMME - 1);
+                return;
+            }
+            strncpy(programme, progStart, len);
+            programme[len] = '\0';
+            trim(programme);
+            has_programme = 1;
+        } else {
+            // Programme is at the end
+            strncpy(programme, progStart, sizeof(programme) - 1);
+            programme[sizeof(programme) - 1] = '\0';
+            trim(programme);
+            has_programme = 1;
+        }
+    }
+
+    // Find Mark=
+    char *markPos = strstr(parseStart, "Mark=");
+    if (!markPos) markPos = strstr(parseStart, "mark=");
+    if (!markPos) markPos = strstr(parseStart, "MARK=");
+    
+    if (markPos) {
+        char *markValue = markPos + 5;
+        char markStr[20] = "";
+        int i = 0;
+        while (markValue[i] && !isspace((unsigned char)markValue[i]) && i < 19) {
+            markStr[i] = markValue[i];
+            i++;
+        }
+        markStr[i] = '\0';
+        
+        if (containsCommandInjectionChars(markStr)) {
+            printf("CMS: Security warning: Command injection attempt detected in Mark field.\n");
+            return;
+        }
+        
+        if (!parseMark(markStr, &mark)) {
+            printf("CMS: Invalid mark format. Mark must be a number between 0 and 100.\n");
+            return;
+        }
+        has_mark = 1;
+    }
+
+    // Check if at least one field to update was provided
+    if (!has_name && !has_programme && !has_mark) {
         printf("CMS: Invalid UPDATE format.\n");
         printf("CMS: Example: UPDATE ID=2123456 Programme=Applied AI\n");
         printf("CMS: Supported fields: Name, Programme, Mark\n");
         return;
     }
 
-    // Convert field name to lowercase for comparison
-    for (int i = 0; field[i]; i++) {
-        field[i] = (char)tolower((unsigned char)field[i]);
-    }
-
-    // Trim whitespace from field and value
-    trim(field);
-    trim(value);
-
-    // Check for command injection in field value
-    if (containsCommandInjectionChars(value)) {
-        printf("CMS: Security warning: Command injection attempt detected in field value.\n");
-        return;
-    }
-
     StudentRecords *rec = &student_records[index];
 
-    if (strcmp(field, "name") == 0) {
-        if (strlen(value) == 0 || isAllWhitespace(value)) {
+    // Update Name if provided
+    if (has_name) {
+        if (strlen(name) == 0 || isAllWhitespace(name)) {
             printf("CMS: Name cannot be empty.\n");
             return;
         }
-        if (strlen(value) >= sizeof(rec->Name)) {
-            printf("CMS: Name too long (max %d characters).\n", (int)sizeof(rec->Name) - 1);
-            return;
-        }
-        
-        // Check for dangerous characters in Name
-        if (containsDangerousChars(value)) {
+        if (containsDangerousChars(name)) {
             printf("CMS: Name contains invalid characters. Cannot contain / | & # characters.\n");
             return;
         }
-        
-        // Enhanced security validation
-        if (!isSecureFieldValue(value)) {
+        if (containsCommandInjectionChars(name)) {
+            printf("CMS: Security warning: Command injection attempt detected in Name field.\n");
+            return;
+        }
+        if (!isSecureFieldValue(name)) {
             printf("CMS: Name contains invalid or potentially dangerous characters.\n");
             return;
         }
-        strncpy(rec->Name, value, sizeof(rec->Name) - 1);
+        strncpy(rec->Name, name, sizeof(rec->Name) - 1);
         rec->Name[sizeof(rec->Name) - 1] = '\0';
     }
-    else if (strcmp(field, "programme") == 0) {
-        if (strlen(value) == 0 || isAllWhitespace(value)) {
+
+    // Update Programme if provided
+    if (has_programme) {
+        if (strlen(programme) == 0 || isAllWhitespace(programme)) {
             printf("CMS: Programme cannot be empty.\n");
             return;
         }
-        if (strlen(value) >= sizeof(rec->Programme)) {
-            printf("CMS: Programme too long (max %d characters).\n", (int)sizeof(rec->Programme) - 1);
-            return;
-        }
-        
-        // Check for dangerous characters in Programme
-        if (containsDangerousChars(value)) {
+        if (containsDangerousChars(programme)) {
             printf("CMS: Programme contains invalid characters. Cannot contain / | & # characters.\n");
             return;
         }
-        
-        // Enhanced security validation
-        if (!isSecureFieldValue(value)) {
+        if (containsCommandInjectionChars(programme)) {
+            printf("CMS: Security warning: Command injection attempt detected in Programme field.\n");
+            return;
+        }
+        if (!isSecureFieldValue(programme)) {
             printf("CMS: Programme contains invalid or potentially dangerous characters.\n");
             return;
         }
-        // Validate programme format (only letters, spaces, hyphens)
-        if (!isValidProgramme(value)) {
+        if (!isValidProgramme(programme)) {
             printf("CMS: Invalid programme format. Programme must contain only letters, spaces, and hyphens.\n");
             printf("CMS: Examples: 'Computer Science', 'Software-Engineering', 'Information Technology'\n");
             return;
         }
-        strncpy(rec->Programme, value, sizeof(rec->Programme) - 1);
+        strncpy(rec->Programme, programme, sizeof(rec->Programme) - 1);
         rec->Programme[sizeof(rec->Programme) - 1] = '\0';
     }
-    else if (strcmp(field, "mark") == 0) {
-        float newMark;
-        if (!parseMark(value, &newMark)) {
-            printf("CMS: Invalid mark. Mark must be a number between 0 and 100.\n");
-            return;
-        }
-        rec->Mark = newMark;
-        calculateGrade(newMark, rec->Grade);
-    }
-    else {
-        printf("CMS: Unsupported field '%s'.\n", field);
-        printf("CMS: Supported fields: Name, Programme, Mark\n");
-        return;
+
+    // Update Mark if provided
+    if (has_mark) {
+        rec->Mark = mark;
+        calculateGrade(mark, rec->Grade);
     }
 
     printf("CMS: The record with ID=%d is successfully updated.\n", id);
 }
-
 void deleteRecord(char *input) {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
