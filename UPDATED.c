@@ -41,14 +41,14 @@ void trim(char *str);
 void toLowerCase(char *str);
 void calculateGrade(float mark, char *grade);
 
-// NEW filtering functions
+// filtering functions
 void filterByProgramme();
 void filterByMarkRange();
 
-// NEW: Save before exit function
+// Save before exit function
 void promptSaveBeforeExit();
 
-// NEW: Programme validation function
+// Programme validation function
 static int isValidProgramme(const char *programme);
 
 // Helper functions
@@ -66,20 +66,20 @@ static int isReasonableString(const char *str);
 static int isAllWhitespace(const char *str);
 static int isValidFieldValue(const char *str);
 
-// NEW: SQL injection prevention functions
+// SQL injection prevention functions
 static int containsSQLInjectionPatterns(const char *str);
 static int isSecureFieldValue(const char *str);
 
-// NEW: Duplicate record detection
+// Duplicate record detection
 static int isDuplicateRecord(int id, const char *name, const char *programme, float mark);
 
-// NEW: Enhanced invalid character checking
+// Enhanced invalid character checking
 static int containsDangerousChars(const char *str);
 
-// NEW: Duplicate field detection
+// Duplicate field detection
 static int hasDuplicateFields(const char *input);
 
-// NEW: Command injection detection
+// Command injection detection
 static int containsCommandInjectionChars(const char *str);
 static int isValidFieldContent(const char *str);
 
@@ -93,7 +93,7 @@ int main(void) {
     while (1) {
         printf("P4_6: ");
         if (!fgets(input, sizeof(input), stdin)) {
-            break;  // EOF or error
+            break;  
         }
         
         // Check if input was truncated
@@ -117,7 +117,7 @@ int main(void) {
             continue;
         }
 
-        // Check for SQL injection
+        // Safe SQL injection detection
         if (containsSQLInjectionPatterns(input)) {
             printf("CMS: Security warning: Potential injection attempt detected in command.\n");
             continue;
@@ -125,18 +125,18 @@ int main(void) {
 
         trim_newline(input);
 
-        // Check the input length
+        // Validate input length
         if (!isValidInputLength(input)) {
             printf("CMS: Invalid input length.\n");
             continue;
         }
 
-        // Make a lowercase copy for command matching so commands are case-insensitive
+        // Make a lowercase copy for command matching (so commands are case-insensitive)
         strcpy(command, input);
         toLowerCase(command);
 
         if (strcmp(command, "exit") == 0) {
-            promptSaveBeforeExit();  // NEW: Ask to save before exit
+            promptSaveBeforeExit();  // Ask to save before exit
             printf("CMS: Exiting program. Goodbye!\n");
             free(student_records);
             return 0;
@@ -159,6 +159,7 @@ int main(void) {
             printf("\nNote: ID must be exactly 7 digits starting with '2' (e.g., 2123456)\n");
             printf("Note: Programme must contain only letters, spaces, and hyphens\n");
             printf("Note: Names and programmes cannot contain / | & # characters\n");
+            
         }
         else if (strcmp(command, "open") == 0) {
             openDatabase();
@@ -197,6 +198,7 @@ int main(void) {
             filterByMarkRange();
         }
         else if (strncmp(command, "insert", 6) == 0) {
+            // Use original input so Name/Programme keep their case
             insertRecord(input);
         }
         else if (strncmp(command, "query", 5) == 0) {
@@ -222,7 +224,7 @@ int main(void) {
     return 0;
 }
 
-//Check for command injection characters
+// Check for command injection characters
 static int containsCommandInjectionChars(const char *str) {
     if (!str) return 0;
     
@@ -235,7 +237,7 @@ static int containsCommandInjectionChars(const char *str) {
     return 0; // No command injection characters
 }
 
-//Comprehensive field content validation
+// Comprehensive field content validation
 static int isValidFieldContent(const char *str) {
     if (!str) return 0;
     
@@ -260,7 +262,7 @@ static int isValidFieldContent(const char *str) {
     return 1;
 }
 
-//Validate programme name (only letters, spaces, and hyphens allowed)
+// Validate programme name (only letters, spaces, and hyphens allowed)
 static int isValidProgramme(const char *programme) {
     if (!programme || *programme == '\0') {
         return 0;  // Empty string
@@ -275,7 +277,7 @@ static int isValidProgramme(const char *programme) {
             return 0;  // Invalid character found
         }
         
-        // Don't allow consecutive spaces or hyphens at start and end
+        // Don't allow consecutive spaces or hyphens at start/end
         if (i == 0 && (c == ' ' || c == '-')) {
             return 0;  // Cannot start with space or hyphen
         }
@@ -299,7 +301,7 @@ static int isValidProgramme(const char *programme) {
     return has_letter;
 }
 
-//Prompt user to save before exiting
+// Prompt user to save before exiting
 void promptSaveBeforeExit() {
     if (!isFileOpen || recordCount == 0) {
         printf("CMS: No changes to save.\n");
@@ -324,7 +326,7 @@ void promptSaveBeforeExit() {
     }
 }
 
-//Check for duplicate records (all fields)
+// Check for duplicate records (all fields)
 static int isDuplicateRecord(int id, const char *name, const char *programme, float mark) {
     for (int i = 0; i < recordCount; i++) {
         // Check if all fields match
@@ -338,7 +340,7 @@ static int isDuplicateRecord(int id, const char *name, const char *programme, fl
     return 0; // No duplicate found
 }
 
-//Check for dangerous characters (/ | & #)
+// Check for dangerous characters (/ | & #)
 static int containsDangerousChars(const char *str) {
     if (!str) return 0;
     
@@ -351,7 +353,7 @@ static int containsDangerousChars(const char *str) {
     return 0; // No dangerous characters
 }
 
-//Check for duplicate fields in input
+// Check for duplicate fields in input
 static int hasDuplicateFields(const char *input) {
     if (!input) return 0;
     
@@ -405,7 +407,7 @@ static int hasDuplicateFields(const char *input) {
     return 0; // No duplicate fields
 }
 
-// Check for SQL injection detection ensure that there is no false positives
+// Safe SQL injection detection - no false positives
 static int containsSQLInjectionPatterns(const char *str) {
     if (!str) return 0;
     
@@ -437,11 +439,11 @@ static int containsSQLInjectionPatterns(const char *str) {
     return 0; // No SQL injection patterns found
 }
 
-//Enhanced field validation with SQL injection detection and invalid character check
+// Enhanced field validation with SQL injection detection and invalid character check
 static int isSecureFieldValue(const char *str) {
     if (!str) return 0;
     
-    // Check basic validity
+    // Check basic validity first
     if (!isValidFieldValue(str)) {
         return 0;
     }
@@ -452,19 +454,19 @@ static int isSecureFieldValue(const char *str) {
         return 0;
     }
     
-    //Check for invalid characters / | & #
+    // Check for invalid characters / | & #
     if (containsDangerousChars(str)) {
         printf("CMS: Invalid characters detected. Cannot contain / | & # characters.\n");
         return 0;
     }
     
-    //Check for command injection characters
+    // Check for command injection characters
     if (containsCommandInjectionChars(str)) {
         printf("CMS: Security warning: Command injection characters detected.\n");
         return 0;
     }
     
-    // Limit consecutive special characters
+    // Additional security: limit consecutive special characters
     int specialCount = 0;
     for (int i = 0; str[i]; i++) {
         if (!isalnum((unsigned char)str[i]) && !isspace((unsigned char)str[i])) {
@@ -562,7 +564,7 @@ void openDatabase() {
                 printf("CMS: Warning - Line %d: Empty programme (ID=%d), skipping.\n", lineNum, id);
                 continue;
             }
-            // NEW: Validate programme format from file
+            // Validate programme format from file
             if (!isValidProgramme(programme)) {
                 printf("CMS: Warning - Line %d: Invalid programme format '%s' (ID=%d), skipping.\n", lineNum, programme, id);
                 continue;
@@ -576,7 +578,7 @@ void openDatabase() {
                 continue;
             }
             
-            //Check for invalid characters in name and programme
+            // Check for invalid characters in name and programme
             if (containsDangerousChars(name)) {
                 printf("CMS: Warning - Line %d: Name contains invalid characters / | & # (ID=%d), skipping.\n", lineNum, id);
                 continue;
@@ -617,7 +619,7 @@ void openDatabase() {
                 printf("CMS: Warning - Line %d: Empty programme (ID=%d), skipping.\n", lineNum, id);
                 continue;
             }
-            // NEW: Validate programme format from file
+            // Validate programme format from file
             if (!isValidProgramme(programme)) {
                 printf("CMS: Warning - Line %d: Invalid programme format '%s' (ID=%d), skipping.\n", lineNum, programme, id);
                 continue;
@@ -631,7 +633,7 @@ void openDatabase() {
                 continue;
             }
             
-            //Check for invalid characters in name and programme
+            // Check for invalid characters in name and programme
             if (containsDangerousChars(name)) {
                 printf("CMS: Warning - Line %d: Name contains invalid characters / | & # (ID=%d), skipping.\n", lineNum, id);
                 continue;
@@ -641,7 +643,7 @@ void openDatabase() {
                 continue;
             }
             
-            //Check for command injection characters
+            // Check for command injection characters
             if (containsCommandInjectionChars(name)) {
                 printf("CMS: Warning - Line %d: Name contains command injection characters (ID=%d), skipping.\n", lineNum, id);
                 continue;
@@ -700,13 +702,13 @@ void insertRecord(char *input) {
         return;
     }
 
-    //Check for command injection in the entire input first
+    // Check for command injection in the entire input first
     if (containsCommandInjectionChars(input)) {
         printf("CMS: Security warning: Command injection attempt detected in input.\n");
         return;
     }
 
-    //Check for duplicate fields first
+    // Check for duplicate fields first
     if (hasDuplicateFields(input)) {
         return;
     }
@@ -734,7 +736,7 @@ void insertRecord(char *input) {
         while (*parseStart == ' ') parseStart++;
     }
 
-    //Enhanced parsing with command injection checks
+    // Enhanced parsing with command injection checks
     
     // Find ID=
     char *idPos = strstr(parseStart, "ID=");
@@ -752,7 +754,7 @@ void insertRecord(char *input) {
         }
         idStr[i] = '\0';
         
-        //Check ID for command injection
+        // Check ID for command injection
         if (containsCommandInjectionChars(idStr)) {
             printf("CMS: Security warning: Command injection attempt detected in ID field.\n");
             return;
@@ -805,13 +807,13 @@ void insertRecord(char *input) {
                 return;
             }
             
-            // Check for dangerous characters in Name
+            // ✅ FIXED: Check for dangerous characters in Name
             if (containsDangerousChars(name)) {
                 printf("CMS: Name contains invalid characters. Cannot contain / | & # characters.\n");
                 return;
             }
             
-            // Check for command injection in Name
+            // ✅ NEW: Check for command injection in Name
             if (containsCommandInjectionChars(name)) {
                 printf("CMS: Security warning: Command injection attempt detected in Name field.\n");
                 return;
@@ -855,13 +857,13 @@ void insertRecord(char *input) {
                 return;
             }
             
-            //Check for dangerous characters in Programme
+            // Check for dangerous characters in Programme
             if (containsDangerousChars(programme)) {
                 printf("CMS: Programme contains invalid characters. Cannot contain / | & # characters.\n");
                 return;
             }
             
-            //Check for command injection in Programme
+            // Check for command injection in Programme
             if (containsCommandInjectionChars(programme)) {
                 printf("CMS: Security warning: Command injection attempt detected in Programme field.\n");
                 return;
@@ -896,7 +898,7 @@ void insertRecord(char *input) {
         }
         markStr[i] = '\0';
         
-        //Check Mark for command injection
+        // Check Mark for command injection
         if (containsCommandInjectionChars(markStr)) {
             printf("CMS: Security warning: Command injection attempt detected in Mark field.\n");
             return;
@@ -929,7 +931,7 @@ void insertRecord(char *input) {
         return;
     }
 
-    //Check for duplicate record (all fields match)
+    // NEW: Check for duplicate record (all fields match)
     if (isDuplicateRecord(id, name, programme, mark)) {
         printf("CMS: Error - Duplicate record detected. A record with the same ID, Name, Programme, and Mark already exists.\n");
         return;
@@ -955,19 +957,21 @@ void insertRecord(char *input) {
     printf("CMS: A new record with ID=%d is successfully inserted.\n", id);
 }
 
+// ... (rest of the functions remain the same as previous version)
+
 void queryRecord(char *input) {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
         return;
     }
 
-    //Check for command injection in QUERY
+    // Check for command injection in QUERY
     if (containsCommandInjectionChars(input)) {
         printf("CMS: Security warning: Command injection attempt detected in query.\n");
         return;
     }
 
-    //Check for duplicate fields in QUERY
+    // Check for duplicate fields in QUERY
     if (hasDuplicateFields(input)) {
         return;
     }
@@ -979,6 +983,7 @@ void queryRecord(char *input) {
     strncpy(buffer, input, sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0';
 
+    // Parse: QUERY ID=2401234 (now case-insensitive for "ID=")
     char *token = strtok(buffer, " ");
     while (token != NULL) {
         char tokenLower[256];
@@ -1025,13 +1030,13 @@ void updateRecord(char *input) {
         return;
     }
 
-    //Check for command injection in UPDATE
+    // Check for command injection in UPDATE
     if (containsCommandInjectionChars(input)) {
         printf("CMS: Security warning: Command injection attempt detected in update.\n");
         return;
     }
 
-    //Check for duplicate fields in UPDATE
+    // ✅ NEW: Check for duplicate fields in UPDATE
     if (hasDuplicateFields(input)) {
         return;
     }
@@ -1043,7 +1048,7 @@ void updateRecord(char *input) {
     strncpy(buffer, input, sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0';
 
-   
+    // Parse: UPDATE ID=2401234
     char *token = strtok(buffer, " ");
     while (token != NULL) {
         // Convert token to lowercase for case-insensitive comparison
@@ -1153,12 +1158,13 @@ void updateRecord(char *input) {
             return;
         }
         
-        //Check for dangerous characters in Name
+        // Check for dangerous characters in Name
         if (containsDangerousChars(value)) {
             printf("CMS: Name contains invalid characters. Cannot contain / | & # characters.\n");
             return;
         }
         
+        // Enhanced security validation
         if (!isSecureFieldValue(value)) {
             printf("CMS: Name contains invalid or potentially dangerous characters.\n");
             return;
@@ -1176,18 +1182,18 @@ void updateRecord(char *input) {
             return;
         }
         
-        //Check for dangerous characters in Programme
+        // Check for dangerous characters in Programme
         if (containsDangerousChars(value)) {
             printf("CMS: Programme contains invalid characters. Cannot contain / | & # characters.\n");
             return;
         }
         
-        
+        // Enhanced security validation
         if (!isSecureFieldValue(value)) {
             printf("CMS: Programme contains invalid or potentially dangerous characters.\n");
             return;
         }
-        //Validate programme format (only letters, spaces, hyphens)
+        // Validate programme format (only letters, spaces, hyphens)
         if (!isValidProgramme(value)) {
             printf("CMS: Invalid programme format. Programme must contain only letters, spaces, and hyphens.\n");
             printf("CMS: Examples: 'Computer Science', 'Software-Engineering', 'Information Technology'\n");
@@ -1220,13 +1226,13 @@ void deleteRecord(char *input) {
         return;
     }
 
-    //Check for command injection in DELETE
+    // Check for command injection in DELETE
     if (containsCommandInjectionChars(input)) {
         printf("CMS: Security warning: Command injection attempt detected in delete.\n");
         return;
     }
 
-    //Check for duplicate fields in DELETE
+    // Check for duplicate fields in DELETE
     if (hasDuplicateFields(input)) {
         return;
     }
@@ -1238,7 +1244,7 @@ void deleteRecord(char *input) {
     strncpy(buffer, input, sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0';
 
-    
+    // Parse: DELETE ID=2401234 (now case-insensitive)
     char *token = strtok(buffer, " ");
     while (token != NULL) {
         // Convert token to lowercase for case-insensitive comparison
@@ -1428,7 +1434,7 @@ void toLowerCase(char *str) {
     }
 }
 
-
+//Filter by Programme
 void filterByProgramme() {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
@@ -1447,7 +1453,7 @@ void filterByProgramme() {
     for (int i = 0; i < recordCount; i++) {
         int alreadyPrinted = 0;
         for (int j = 0; j < i; j++) {
-            //Case-insensitive comparison for uniqueness
+            // Case-insensitive comparison for uniqueness
             char prog1Lower[MAX_PROGRAMME];
             char prog2Lower[MAX_PROGRAMME];
             
@@ -1482,14 +1488,14 @@ void filterByProgramme() {
         return;
     }
     trim_newline(selected);
-    trim(selected);  //Trim whitespace
+    trim(selected);  // Trim whitespace
 
     if (strlen(selected) == 0) {
         printf("CMS: Invalid input. Programme name cannot be empty.\n");
         return;
     }
 
-    //Convert input to lowercase for comparison
+    //  Convert input to lowercase for comparison
     char selectedLower[MAX_PROGRAMME];
     strcpy(selectedLower, selected);
     toLowerCase(selectedLower);
@@ -1545,7 +1551,7 @@ void filterByProgramme() {
     }
 }
 
-// NEW: Filter by Mark Range
+// Filter by Mark Range
 void filterByMarkRange() {
     if (!isFileOpen) {
         printf("CMS: Please open the database first using OPEN command.\n");
@@ -1567,15 +1573,15 @@ void filterByMarkRange() {
         return;
     }
     trim_newline(input);
-    trim(input);  //Trim whitespace
+    trim(input);  //  Trim whitespace
 
-    //Check for empty input
+    //  Check for empty input
     if (strlen(input) == 0) {
         printf("CMS: Input cannot be empty.\n");
         return;
     }
 
-    //More flexible parsing - try different formats
+    //  More flexible parsing - try different formats
     int parsed = 0;
     
     // Try format: "XX - XX" (with spaces around dash)
@@ -1612,7 +1618,7 @@ void filterByMarkRange() {
         return;
     }
 
-    //Validate range
+    //  Validate range
     if (low < 0 || high > 100) {
         printf("CMS: Invalid range. Both marks must be between 0 and 100.\n");
         return;
@@ -1644,7 +1650,6 @@ void filterByMarkRange() {
     }
 }
 
-// ==================== HELPER FUNCTION IMPLEMENTATIONS ====================
 
 static void trim_newline(char *s) {
     if (!s) return;
@@ -1692,7 +1697,7 @@ static int parseID(const char *str, int *id) {
         return 0;  // Empty string
     }
     
-    //Check for spaces in ID
+    // Check for spaces in ID
     for (int i = 0; str[i]; i++) {
         if (isspace((unsigned char)str[i])) {
             return 0;
@@ -1777,7 +1782,6 @@ static int parseMark(const char *str, float *mark) {
     return 1;  // Success
 }
 
-// ==================== SECURITY VALIDATION FUNCTIONS ====================
 
 static int isValidInputLength(const char *input) {
     return (input != NULL && strlen(input) < 256); // Match your buffer size
@@ -1834,7 +1838,7 @@ static int isValidFieldValue(const char *str) {
         return 0;
     }
     
-    //Restrict to printable ASCII
+    // restrict to printable ASCII
     for (int i = 0; str[i]; i++) {
         if ((unsigned char)str[i] < 32 || (unsigned char)str[i] > 126) {
             return 0;
